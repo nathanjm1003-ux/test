@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import abc
 import random
-from typing import Any, List
+from typing import Any, List, Optional
 
 
 class Agent(abc.ABC):
@@ -19,6 +19,16 @@ class Agent(abc.ABC):
 
     def observe(self, observation: Any, reward: float, done: bool) -> None:
         """Feedback after each step. Override to learn online."""
+
+    def get_state(self) -> Optional[dict]:
+        """JSON-serializable state for persistence; None if unsupported."""
+        return None
+
+    def set_state(self, state: dict) -> None:
+        """Restore state produced by ``get_state``."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support persistence"
+        )
 
 
 class RandomAgent(Agent):

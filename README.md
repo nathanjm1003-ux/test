@@ -44,6 +44,28 @@ Key safety properties of the harness:
 - **Reproducibility** — each episode runs on an explicit seed; identical
   agent + environment + seed always produce identical results.
 
+## Training and saving agents
+
+`QLearningAgent` is a tabular Q-learner whose Q-table survives across
+episodes. `train()` runs it repeatedly on one fixed map (same env seed,
+varying exploration), and any agent with `get_state`/`set_state` can be
+saved to a JSON file and restored later:
+
+```python
+from agent_sandbox import QLearningAgent, train, save_agent, load_agent, run_episode
+from agent_sandbox.environments import GridWorld
+
+env = GridWorld(size=5)
+agent = QLearningAgent(state_fn=lambda obs: obs["position"])
+train(agent, env, episodes=300, seed=3)
+
+save_agent(agent, "trained.json")
+agent = load_agent("trained.json", factory=lambda: QLearningAgent(state_fn=lambda o: o["position"]))
+
+agent.epsilon = 0.0                     # act greedily
+print(run_episode(agent, env, seed=3).total_reward)
+```
+
 ## Testing tool-using agents
 
 ```python

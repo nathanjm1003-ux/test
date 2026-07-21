@@ -17,6 +17,8 @@ blocks unregistered tools.
 from agent_sandbox.agent import Agent, RandomAgent
 from agent_sandbox.environment import Environment, StepResult, make, register
 from agent_sandbox.harness import EpisodeResult, EvalReport, evaluate, run_episode
+from agent_sandbox.persistence import load_agent, save_agent
+from agent_sandbox.qlearning import QLearningAgent, train
 from agent_sandbox.tools import ToolBudgetExceeded, ToolCall, ToolNotAllowed, ToolSandbox
 
 # Importing the environments package registers the built-in environments.
@@ -25,6 +27,10 @@ from agent_sandbox import environments as _environments  # noqa: F401
 __all__ = [
     "Agent",
     "RandomAgent",
+    "QLearningAgent",
+    "train",
+    "save_agent",
+    "load_agent",
     "Environment",
     "StepResult",
     "make",
