@@ -118,7 +118,23 @@
   .attr-name{ font-size:13px; font-weight:600; }
   .attr-name small{ color:var(--faint); font-weight:400; margin-left:6px; }
   .attr-lvl{ font-size:12px; color:var(--muted); }
+  .attr{ width:100%; text-align:left; background:none; border:none; }
   .attr .bar{ grid-column:2 / span 2; height:6px; }
+  .attr[aria-expanded="true"] .attr-name{ color:var(--crimson); }
+  .skills{ display:flex; flex-direction:column; gap:7px; margin:-2px 0 4px 36px;
+    padding-left:12px; border-left:2px solid var(--line-soft); }
+  .skill{ display:grid; grid-template-columns:1fr auto; column-gap:8px; row-gap:3px; align-items:baseline; }
+  .skill-name{ font-size:12px; font-weight:600; color:var(--muted); }
+  .skill-lvl{ font-size:11px; color:var(--faint); }
+  .skill .bar{ grid-column:1 / span 2; height:4px; }
+  .skill-xp{ display:none; }
+  .skill-empty{ font-size:12px; color:var(--faint); }
+  .skillrow{ display:flex; gap:10px; align-items:flex-start; background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; box-shadow:var(--shadow); }
+  .skillrow .gem{ margin:4px 2px 0 0; }
+  .skillrow-list{ flex:1; display:flex; flex-wrap:wrap; gap:6px; }
+  .skillrow-list .chip{ font-size:12px; padding:5px 10px; }
+  .skillrow-list .chip b{ color:var(--accent-strong); margin-left:3px; }
 
   /* ---------- sections & quest rows ---------- */
   .sect{ display:flex; flex-direction:column; gap:8px; }
@@ -244,6 +260,8 @@
   .hpbar i{ display:block; height:100%; border-radius:99px; transition:width .5s ease;
     background:linear-gradient(90deg, var(--crimson-strong), var(--crimson)); }
   .hp-text{ font-size:12px; color:var(--muted); }
+  .struck-today{ color:var(--crimson); font-weight:700; }
+  .foe-picks{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .dmgfloat{ position:absolute; right:16px; top:6px; font-weight:800; font-size:18px; pointer-events:none;
     color:var(--crimson); font-family:ui-monospace, Menlo, monospace; animation:dmgUp .9s ease-out forwards; }
   @keyframes dmgUp{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(-30px); } }
@@ -325,8 +343,8 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal, #packmodal, #rewardmodal, #bossmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on{ display:flex; }
+  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on{ display:flex; }
   .sheet{
     width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
     border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
@@ -405,6 +423,8 @@
     <div>
       <span class="f-label">Feeds attribute</span>
       <div class="chips" id="f-attr"></div>
+      <span class="f-label" style="margin-top:12px">Kind (which bosses it strikes)</span>
+      <div class="chips" id="f-tag"></div>
     </div>
     <div>
       <span class="f-label">Type</span>
@@ -434,6 +454,30 @@
   </div>
 </div>
 
+<div id="skillmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+    <h2 id="skill-title">New skill</h2>
+    <div>
+      <label class="f-label" for="s-name">Skill name</label>
+      <input class="f-input" id="s-name" type="text" maxlength="24" placeholder="e.g. Coding, Climbing, Spanish" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Branch</span>
+      <div class="chips" id="s-attr"></div>
+    </div>
+    <div>
+      <label class="f-label" for="s-kw">Auto-tag words (comma separated)</label>
+      <input class="f-input" id="s-kw" type="text" maxlength="120" placeholder="code, leetcode, debug, ship" autocomplete="off">
+      <p class="pack-hint" style="margin-top:6px">Quests whose names contain these words are filed under this skill automatically.</p>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="s-cancel">Cancel</button>
+      <button class="btn ghost" id="s-delete" style="display:none">Retire</button>
+      <button class="btn" id="s-save">Save skill</button>
+    </div>
+  </div>
+</div>
+
 <div id="bossmodal">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="boss-title">
     <h2 id="boss-title">Challenge a boss</h2>
@@ -442,16 +486,20 @@
       <input class="f-input" id="b-name" type="text" maxlength="60" placeholder="e.g. The Unwritten Application" autocomplete="off">
     </div>
     <div>
-      <span class="f-label">Struck by quests of</span>
+      <span class="f-label">Branch</span>
       <div class="chips" id="b-attr"></div>
+      <span class="f-label" style="margin-top:12px">Struck by</span>
+      <div class="chips" id="b-tag"></div>
+      <div class="foe-picks" id="b-foes"></div>
     </div>
     <div>
-      <label class="f-label" for="b-hp">Might (HP)</label>
-      <input class="f-input num" id="b-hp" type="number" min="100" max="5000" step="50" inputmode="numeric">
+      <label class="f-label" for="b-hp">Might — sessions to fell it</label>
+      <input class="f-input num" id="b-hp" type="number" min="2" max="60" step="1" inputmode="numeric">
       <div class="xp-quick">
-        <button class="chip" data-might="300">Lesser · 300</button>
-        <button class="chip" data-might="600">Fearsome · 600</button>
-        <button class="chip" data-might="1200">Legendary · 1200</button>
+        <button class="chip" data-might="3">Lesser · 3</button>
+        <button class="chip" data-might="5">Fearsome · 5</button>
+        <button class="chip" data-might="10">Legendary · 10</button>
+        <button class="chip" data-might="20">Mythic · 20</button>
       </div>
     </div>
     <div class="sheet-actions">
@@ -510,6 +558,62 @@ const ATTRS = {
   craft:  { name:"Craft",  desc:"creative projects",  color:"#3E7580" },
   social: { name:"Social", desc:"relationships",      color:"#A34E68" },
 };
+/* Skills are sub-abilities of an attribute. They live in state, so any can be
+   created, renamed, or retired in-app; `kw` drives auto-tagging of quests and
+   `foes` seeds boss-name suggestions. Each tracks its own XP and level. */
+function DEFAULT_SKILLS(){
+  return [
+    { id:"lifting",  attr:"body",   name:"Lifting",     xp:0, kw:["gym","workout","work out","lift","strength","push-up","pushup","squat","weights","training"], foes:["The Gym Rat","The Iron Beast"] },
+    { id:"running",  attr:"body",   name:"Running",     xp:0, kw:["run","jog","sprint","mile","5k","cardio"], foes:["The Winded Lung","The First Mile"] },
+    { id:"walking",  attr:"body",   name:"Walking",     xp:0, gen:1, kw:["walk","step","hike","kayak","charlie","outside","daylight","stroll","bike","park","falls","move","movement"], foes:["The Restless Hound","The Long Road"] },
+    { id:"recovery", attr:"body",   name:"Recovery",    xp:0, kw:["sleep","bed","stretch","wind down","screen","mobility","nap","rest","water","snack","vegetable","eat","meal","yoga","dentist","appointment","doctor","shower"], foes:["The Midnight Scroll","The Sleep Debt"] },
+    { id:"reading",  attr:"mind",   name:"Reading",     xp:0, kw:["read","page","audiobook","book","chapter","listen"], foes:["The Unread Shelf","The Dusty Tome"] },
+    { id:"study",    attr:"mind",   name:"Study",       xp:0, gen:1, kw:["study","neuro","learn","concept","language","problem","puzzle","article","video","educational","teach","summar"], foes:["The Unlearned Art","The Exam Ahead"] },
+    { id:"writing",  attr:"mind",   name:"Reflection",  xp:0, kw:["journal","reflect","question","christian","faith","meditat","write"], foes:["The Unasked Question","The Quiet Doubt"] },
+    { id:"focus",    attr:"grind",  name:"Deep Work",   xp:0, kw:["deep-work","deep work","focus","block","avoid","to-do","task","priorit"], foes:["The Procrastinator","The Scattered Mind"] },
+    { id:"admin",    attr:"grind",  name:"Admin",       xp:0, gen:1, kw:["errand","clean","organi","prep","plan","review","email","inbox","form","applica","usc","supplies","list","appointment","dentist","shift"], foes:["The Orientation Application","The Paperwork Pile"] },
+    { id:"money",    attr:"grind",  name:"Money",       xp:0, kw:["budget","spend","subscription","money","save","cost","pay"], foes:["The Leaky Purse","The Empty Coffer"] },
+    { id:"trombone", attr:"craft",  name:"Trombone",    xp:0, kw:["trombone","practice","scale","instrument","rehears","horn"], foes:["The Rusty Embouchure","The Silent Horn"] },
+    { id:"origami",  attr:"craft",  name:"Origami",     xp:0, kw:["origami","fold","paper","crane"], foes:["The Thousand Cranes","The Crumpled Sheet"] },
+    { id:"making",   attr:"craft",  name:"Making",      xp:0, gen:1, kw:["create","creative","project","draft","sketch","idea","cosmere","build","piece","make","technique","tutorial"], foes:["The Unfinished Work","The Blank Page"] },
+    { id:"sharing",  attr:"craft",  name:"Sharing",     xp:0, kw:["share","post","feedback","show","publish","work-in-progress"], foes:["The Hidden Portfolio","The Locked Drawer"] },
+    { id:"partner",  attr:"social", name:"Lizzie",      xp:0, kw:["lizzie","date","girlfriend","snuggl"], foes:["The Distance","The Missed Evening"] },
+    { id:"kin",      attr:"social", name:"Family",      xp:0, kw:["mom","dad","family","lindsay","brown","parent","sibling"], foes:["The Unmade Call","The Drifting Ties"] },
+    { id:"friends",  attr:"social", name:"Friends",     xp:0, kw:["friend","ellie","skyler","madelyn","hangout","get-together","coffee","group"], foes:["The Fading Circle","The Empty Calendar"] },
+    { id:"outreach", attr:"social", name:"Outreach",    xp:0, gen:1, kw:["message","text","call","coworker","complim","note","reconnect","conversation","letter"], foes:["The Silent Phone","The Unsent Letter"] },
+  ];
+}
+const skillNeed = l => 40 + (l - 1) * 25;
+const SEED_SKILLS = DEFAULT_SKILLS();   // lookup source before `state` exists
+function allSkills(){ return (state && state.skills) || SEED_SKILLS; }
+function skillsFor(attr){ return allSkills().filter(s => s.attr === attr); }
+function SK(id){ return allSkills().find(s => s.id === id) || null; }
+function skillName(id){ const s = SK(id); return s ? s.name : "—"; }
+function foesFor(id){
+  const s = SK(id);
+  if(s && s.foes && s.foes.length) return s.foes;
+  return s ? ["The " + s.name + " Trial", "The Neglected " + s.name] : ["The Nameless Foe"];
+}
+/* longest keyword hit wins, so "deep work" beats a stray "work" */
+function classify(name, attr){
+  const pool = skillsFor(attr);
+  if(!pool.length) return null;
+  const low = name.toLowerCase();
+  let best = null, bestLen = 0;
+  for(const s of pool){
+    for(const k of (s.kw || [])){
+      if(k.length > bestLen && low.includes(k)){ best = s.id; bestLen = k.length; }
+    }
+  }
+  return best || (pool.find(s => s.gen) || pool[0]).id;
+}
+function mkSkill(name, attr, kw){
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 12) || "skill";
+  let id = base, n = 2;
+  while(SK(id)) id = base + n++;
+  return { id, attr, name, xp:0, kw: kw && kw.length ? kw : [name.toLowerCase()], foes:[] };
+}
+
 const TITLES = [[1,"Novice"],[3,"Apprentice"],[5,"Adept"],[8,"Journeyman"],[12,"Veteran"],[16,"Expert"],[21,"Master"],[27,"Grandmaster"],[34,"Legend"],[42,"Mythic"]];
 const TYPE_LABEL = { daily:"Daily", weekly:"Weekly", oneoff:"One-off" };
 
@@ -538,9 +642,9 @@ function defaultRewards(){
 function mkReward(name, cost){
   return { id: "r" + Math.random().toString(36).slice(2,9) + Date.now().toString(36), name, cost };
 }
-function mkBoss(name, attr, hp){
+function mkBoss(name, tag, need){
   return { id: "b" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
-           name, attr, hp, maxHp: hp, created: Date.now(), defeated: null };
+           name, tag, attr: SK(tag).attr, need, log: [], created: Date.now(), defeated: null };
 }
 
 function defaultState(){
@@ -548,9 +652,10 @@ function defaultState(){
     xp: 0,
     gold: 0,
     stats: { done:0, redeems:0, timer:0, bosses:0 },
+    skills: DEFAULT_SKILLS(),
     badges: {},
     rewards: defaultRewards(),
-    bosses: [ mkBoss("The Orientation Application", "grind", 300) ],
+    bosses: [ mkBoss("The Gym Rat", "lifting", 5), mkBoss("The Orientation Application", "admin", 5) ],
     attrs: { body:0, mind:0, grind:0, craft:0, social:0 },
     quests: [
       mkQuest("Move for 30 minutes", "body", 30, "daily"),
@@ -563,9 +668,10 @@ function defaultState(){
     history: [],
   };
 }
-function mkQuest(name, attr, xp, type, src){
+function mkQuest(name, attr, xp, type, src, tag){
   return { id: "q" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
-           name, attr, xp, type, streak:0, lastDone:null, lastWeek:null, done:false, prev:null, src: src || null };
+           name, attr, xp, type, tag: tag || classify(name, attr),
+           streak:0, lastDone:null, lastWeek:null, done:false, prev:null, src: src || null };
 }
 
 function load(){
@@ -585,7 +691,22 @@ function load(){
         };
         if(!s.badges) s.badges = {};
         if(typeof s.stats.bosses !== "number") s.stats.bosses = 0;
-        if(!Array.isArray(s.bosses)) s.bosses = [ mkBoss("The Orientation Application", "grind", 300) ];
+        if(!Array.isArray(s.skills) || !s.skills.length) s.skills = DEFAULT_SKILLS();
+        for(const sk of s.skills){ if(typeof sk.xp !== "number") sk.xp = 0; }
+        if(!Array.isArray(s.bosses)) s.bosses = [ mkBoss("The Gym Rat", "lifting", 5) ];
+        for(const q of s.quests){ if(!q.tag || !SK(q.tag)) q.tag = classify(q.name, q.attr); }
+        for(const b of s.bosses){          // HP-era bosses become session bosses
+          if(!b.tag || !SK(b.tag)) b.tag = classify(b.name, b.attr || "grind");
+          b.attr = SK(b.tag).attr;
+          if(typeof b.need !== "number"){
+            b.need = Math.max(3, Math.min(30, Math.round((b.maxHp || 300) / 100) * 2));
+            const doneFrac = b.maxHp ? (b.maxHp - (b.hp || 0)) / b.maxHp : 0;
+            const had = Math.min(b.need - 1, Math.floor(doneFrac * b.need));
+            b.log = Array.from({ length: Math.max(0, had) }, (_, i) => ({ d: "migrated-" + i, q: null }));
+            delete b.hp; delete b.maxHp;
+          }
+          if(!Array.isArray(b.log)) b.log = [];
+        }
         return s;
       }
     }
@@ -927,6 +1048,8 @@ const BADGES = [
   { id:"clock",   ic:"hourglass", name:"Timekeeper",           desc:"Finish 5 quests by timer",              check:s => (s.stats.timer || 0) >= 5 },
   { id:"slayer",  ic:"sword",     name:"Slayer",               desc:"Vanquish your first boss",              check:s => (s.stats.bosses || 0) >= 1 },
   { id:"giants",  ic:"crown",     name:"Giant Slayer",         desc:"Vanquish 3 bosses",                     check:s => (s.stats.bosses || 0) >= 3 },
+  { id:"skilled", ic:"gem",       name:"Skilled Hand",         desc:"Take any skill to level 5",             check:s => (s.skills || []).some(k => levelInfo(k.xp, skillNeed).level >= 5) },
+  { id:"poly",    ic:"book",      name:"Polymath",             desc:"Take 5 skills to level 3",              check:s => (s.skills || []).filter(k => levelInfo(k.xp, skillNeed).level >= 3).length >= 5 },
 ];
 function checkAchievements(){
   const earned = [];
@@ -948,6 +1071,7 @@ function announceBadges(earned, delay){
 }
 
 /* ===== mutations ===== */
+let openAttr = null;
 let justDoneId = null;
 function completeQuest(id){
   const q = state.quests.find(x => x.id === id);
@@ -973,19 +1097,23 @@ function completeQuest(id){
   state.gold += q.xp;
   state.attrs[q.attr] += q.xp;
   state.stats.done++;
+  const sk = SK(q.tag);
+  const beforeSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
+  if(sk) sk.xp += q.xp;
+  const afterSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
   if(q.src) LT(q.src).c++;
 
-  /* strike bosses of this attribute; defeat pays a bonus scaled to might */
+  /* strike bosses this quest's subtype is keyed to — at most once per day each */
   const struck = [], victories = [];
   for(const b of state.bosses){
-    if(b.defeated || b.attr !== q.attr) continue;
-    b.hp = Math.max(0, b.hp - q.xp);
-    struck.push({ id: b.id, dmg: q.xp });
-    if(b.hp === 0){
+    if(b.defeated || b.tag !== q.tag) continue;
+    if(b.log.some(e => e.d === tk)) continue;
+    b.log.push({ d: tk, q: q.id });
+    struck.push({ id: b.id, n: b.log.length, need: b.need });
+    if(b.log.length >= b.need){
       b.defeated = Date.now();
       state.stats.bosses++;
-      const bonusXp = Math.max(5, Math.round(b.maxHp * 0.2 / 5) * 5);
-      const bonusGold = Math.max(5, Math.round(b.maxHp * 0.4 / 5) * 5);
+      const bonusXp = b.need * 25, bonusGold = b.need * 50;
       state.xp += bonusXp; state.attrs[b.attr] += bonusXp; state.gold += bonusGold;
       victories.push({ boss: b, bonusXp, bonusGold });
     }
@@ -1016,13 +1144,14 @@ function completeQuest(id){
     showLevelUp(afterChar, afterAttr > beforeAttr ? q.attr : null, afterAttr);
   }else{
     let sub = ATTRS[q.attr].name;
-    if(afterAttr > beforeAttr) sub += " reached Lv " + afterAttr;
+    if(afterSkill > beforeSkill) sub = sk.name + " skill reached Lv " + afterSkill;
+    else if(afterAttr > beforeAttr) sub += " reached Lv " + afterAttr;
     else if(q.type === "daily" && q.streak >= 2) sub += " · " + q.streak + "-day streak";
     sub += " · +" + q.xp + " gold";
     showToast("+" + q.xp + " XP", sub, q.attr, id);
   }
   announceBadges(checkAchievements(), 1700);
-  for(const st of struck) spawnDamage(st.id, st.dmg);   // after every re-render, or the float is wiped
+  for(const st of struck) spawnDamage(st.id, st.n, st.need);   // after every re-render, or the float is wiped
   return q;
 }
 
@@ -1039,8 +1168,12 @@ function uncompleteQuest(id){
   state.gold = Math.max(0, state.gold - q.xp);
   state.stats.done = Math.max(0, state.stats.done - 1);
   state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
-  for(const b of state.bosses){   // heal active bosses; a defeat already claimed stays won
-    if(!b.defeated && b.attr === q.attr) b.hp = Math.min(b.maxHp, b.hp + q.xp);
+  const usk = SK(q.tag);
+  if(usk) usk.xp = Math.max(0, usk.xp - q.xp);
+  for(const b of state.bosses){   // withdraw today's strike; a defeat already claimed stays won
+    if(b.defeated) continue;
+    const i = b.log.findIndex(e => e.q === q.id && e.d === todayKey());
+    if(i >= 0) b.log.splice(i, 1);
   }
   if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
 
@@ -1054,9 +1187,9 @@ function uncompleteQuest(id){
 function upsertQuest(data){
   if(editingId){
     const q = state.quests.find(x => x.id === editingId);
-    if(q){ q.name = data.name; q.attr = data.attr; q.xp = data.xp; q.type = data.type; }
+    if(q){ q.name = data.name; q.attr = data.attr; q.xp = data.xp; q.type = data.type; q.tag = data.tag; }
   }else{
-    state.quests.push(mkQuest(data.name, data.attr, data.xp, data.type));
+    state.quests.push(mkQuest(data.name, data.attr, data.xp, data.type, null, data.tag));
   }
   save(); render();
 }
@@ -1080,10 +1213,23 @@ function charCardHTML(){
   const rows = Object.keys(ATTRS).map(k => {
     const ai = levelInfo(state.attrs[k], attrNeed);
     const pct = Math.round((ai.into / ai.need) * 100);
-    return '<div class="attr">' + gemHTML(k) +
+    const open = openAttr === k;
+    let html = '<button class="attr" data-act="attr-toggle" data-id="' + k + '" aria-expanded="' + open + '">' + gemHTML(k) +
       '<span class="attr-name">' + ATTRS[k].name + '<small>' + ATTRS[k].desc + '</small></span>' +
       '<span class="attr-lvl num">Lv ' + ai.level + ' · ' + ai.into + '/' + ai.need + '</span>' +
-      '<span class="bar"><i style="width:' + pct + '%;background:' + ATTRS[k].color + '"></i></span></div>';
+      '<span class="bar"><i style="width:' + pct + '%;background:' + ATTRS[k].color + '"></i></span></button>';
+    if(open){
+      const list = skillsFor(k).slice().sort((a, b) => b.xp - a.xp);
+      html += '<div class="skills">' + (list.length ? list.map(s => {
+        const si = levelInfo(s.xp, skillNeed);
+        const sp = Math.round((si.into / si.need) * 100);
+        return '<div class="skill"><span class="skill-name">' + esc(s.name) + '</span>' +
+          '<span class="skill-lvl num">Lv ' + si.level + '</span>' +
+          '<span class="bar"><i style="width:' + sp + '%;background:' + ATTRS[k].color + '"></i></span>' +
+          '<span class="skill-xp num">' + s.xp + ' xp</span></div>';
+      }).join("") : '<div class="skill-empty">No skills in this branch yet.</div>') + '</div>';
+    }
+    return html;
   }).join("");
   return '<section class="char">' +
     '<div class="char-top">' +
@@ -1106,7 +1252,8 @@ function charCardHTML(){
 function questRowHTML(q){
   const done = completedNow(q);
   const st = effStreak(q);
-  const meta = ['<span class="dot" style="background:' + ATTRS[q.attr].color + '"></span> ' + ATTRS[q.attr].name,
+  const sub = q.tag && SK(q.tag) ? skillName(q.tag) : null;
+  const meta = ['<span class="dot" style="background:' + ATTRS[q.attr].color + '"></span> ' + ATTRS[q.attr].name + (sub ? " · " + sub : ""),
                 TYPE_LABEL[q.type]];
   if(st >= 2) meta.push('<span class="streak">' + st + '-day streak</span>');
   const mins = done ? null : parseDuration(q.name);
@@ -1153,13 +1300,17 @@ function renderToday(){
     html += '<div class="empty">No boss stands against you. Challenge one — a big goal with a health bar.</div>';
   }else{
     html += activeBosses.map(b => {
-      const pct = Math.round((b.hp / b.maxHp) * 100);
+      const hits = b.log.length;
+      const pct = Math.round(((b.need - hits) / b.need) * 100);
+      const hitToday = b.log.some(e => e.d === todayKey());
       return '<button class="boss" data-act="boss-edit" data-id="' + b.id + '" data-bosscard="' + b.id + '">' +
         '<span class="boss-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4L4 20M6.5 2.5L4 4l2.5 1.5M17.5 2.5L20 4l-2.5 1.5M4 17l3 3M20 17l-3 3"/></svg></span>' +
         '<span class="boss-main"><span class="boss-name">' + esc(b.name) + '</span>' +
-        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[b.attr].color + '"></span> ' + ATTRS[b.attr].name + ' quests strike this foe</span>' +
+        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[b.attr].color + '"></span> ' +
+          skillName(b.tag) + ' quests strike this foe · one hit a day</span>' +
         '<span class="hpbar"><i style="width:' + pct + '%"></i></span>' +
-        '<span class="hp-text num">' + b.hp + ' / ' + b.maxHp + ' HP</span></span></button>';
+        '<span class="hp-text num">' + hits + ' / ' + b.need + ' strikes' +
+          (hitToday ? ' <span class="struck-today">· struck today</span>' : '') + '</span></span></button>';
     }).join("");
   }
   html += '</div>';
@@ -1202,6 +1353,17 @@ function renderQuests(){
     '<span class="q-meta">' + packCount + ' quest templates power the board</span></span>' +
     '<button class="icon-btn wide" data-act="import-pack">Import</button>' +
     (state.pack ? '<button class="icon-btn wide danger" data-act="reset-pack">Reset</button>' : '') + '</div>';
+  html += '<div class="sect"><div class="sect-label"><span>Skills</span><button class="sect-add" data-act="skill-new">+ New skill</button></div>';
+  for(const a of Object.keys(ATTRS)){
+    const list = skillsFor(a);
+    if(!list.length) continue;
+    html += '<div class="skillrow"><span class="gem" style="background:' + ATTRS[a].color + '"><b>' + ATTRS[a].name[0] + '</b></span>' +
+      '<span class="skillrow-list">' + list.map(s =>
+        '<button class="chip" data-act="skill-edit" data-id="' + s.id + '" style="--chipcol:' + ATTRS[a].color + '">' +
+        esc(s.name) + ' <b class="num">' + levelInfo(s.xp, skillNeed).level + '</b></button>').join("") + '</span></div>';
+  }
+  html += '</div>';
+
   for(const type of ["daily","weekly","oneoff"]){
     const list = state.quests.filter(q => q.type === type);
     if(!list.length) continue;
@@ -1402,16 +1564,67 @@ function importPack(txt){
   return null;
 }
 
+/* ===== skill manager ===== */
+let editingSkillId = null, skillAttr = "body";
+function openSkillModal(id){
+  editingSkillId = id || null;
+  const s = id ? SK(id) : null;
+  $("#skill-title").textContent = s ? "Edit skill" : "New skill";
+  $("#s-name").value = s ? s.name : "";
+  $("#s-kw").value = s ? (s.kw || []).join(", ") : "";
+  skillAttr = s ? s.attr : "body";
+  paintSkillModal();
+  const del = $("#s-delete");
+  del.style.display = s ? "" : "none";
+  del.classList.remove("arm"); del.textContent = "Retire";
+  $("#skillmodal").classList.add("on");
+  if(!s) setTimeout(() => $("#s-name").focus(), 120);
+}
+function paintSkillModal(){
+  $("#s-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === skillAttr ? " on" : "") + '" data-sattr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+}
+function closeSkillModal(){ $("#skillmodal").classList.remove("on"); editingSkillId = null; }
+function saveSkillModal(){
+  const name = $("#s-name").value.trim();
+  if(!name){ $("#s-name").focus(); return; }
+  const kw = $("#s-kw").value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+  if(editingSkillId){
+    const s = SK(editingSkillId);
+    if(s){ s.name = name; s.attr = skillAttr; s.kw = kw.length ? kw : [name.toLowerCase()]; }
+  }else{
+    state.skills.push(mkSkill(name, skillAttr, kw));
+  }
+  save(); render(); closeSkillModal();
+}
+/* Retiring a skill re-files its quests and bosses on the branch's next skill,
+   folding its XP in so nothing earned is lost. */
+function retireSkill(id){
+  const s = SK(id);
+  if(!s) return;
+  const heir = skillsFor(s.attr).find(x => x.id !== id) || null;
+  if(heir) heir.xp += s.xp;
+  for(const q of state.quests){ if(q.tag === id) q.tag = heir ? heir.id : classify(q.name, q.attr); }
+  for(const b of state.bosses){
+    if(b.tag !== id) continue;
+    if(heir){ b.tag = heir.id; b.attr = heir.attr; }
+    else b.defeated = b.defeated || Date.now();
+  }
+  state.skills = state.skills.filter(x => x.id !== id);
+  save(); render();
+}
+
 /* ===== boss battles ===== */
 let victoryTimer = null;
-let editingBossId = null, bossAttr = "grind";
-function spawnDamage(bossId, dmg){
+let editingBossId = null, bossAttr = "body", bossTag = "training";
+function spawnDamage(bossId, n, need){
   if(!motionOK()) return;
   const el = document.querySelector('[data-bosscard="' + bossId + '"]');
   if(!el) return;
   const s = document.createElement("span");
   s.className = "dmgfloat";
-  s.textContent = "−" + dmg;
+  s.textContent = n >= need ? "SLAIN!" : "HIT " + n + "/" + need;
   el.appendChild(s);
   setTimeout(() => s.remove(), 950);
 }
@@ -1436,8 +1649,9 @@ function openBossModal(id){
   const b = id ? state.bosses.find(x => x.id === id) : null;
   $("#boss-title").textContent = b ? "Edit boss" : "Challenge a boss";
   $("#b-name").value = b ? b.name : "";
-  $("#b-hp").value = b ? b.maxHp : 300;
-  bossAttr = b ? b.attr : "grind";
+  $("#b-hp").value = b ? b.need : 5;
+  bossTag = b ? b.tag : "training";
+  bossAttr = (SK(bossTag) || skillsFor('body')[0]).attr;
   paintBossModal();
   const del = $("#b-delete");
   del.style.display = b ? "" : "none";
@@ -1449,23 +1663,28 @@ function paintBossModal(){
   $("#b-attr").innerHTML = Object.keys(ATTRS).map(k =>
     '<button class="chip' + (k === bossAttr ? " on" : "") + '" data-battr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
     '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#b-tag").innerHTML = skillsFor(bossAttr).map(o => o.id).map(k =>
+    '<button class="chip' + (k === bossTag ? " on" : "") + '" data-btag="' + k + '" style="--chipcol:' + ATTRS[bossAttr].color + '">' +
+    skillName(k) + '</button>').join("");
+  $("#b-foes").innerHTML = foesFor(bossTag).map(f =>
+    '<button class="chip" data-foe="' + esc(f) + '">' + esc(f) + '</button>').join("");
 }
 function closeBossModal(){ $("#bossmodal").classList.remove("on"); editingBossId = null; }
 function saveBossModal(){
   const name = $("#b-name").value.trim();
   if(!name){ $("#b-name").focus(); return; }
-  let hp = parseInt($("#b-hp").value, 10);
-  if(!Number.isFinite(hp)) hp = 300;
-  hp = Math.max(100, Math.min(5000, Math.round(hp / 50) * 50));
+  let need = parseInt($("#b-hp").value, 10);
+  if(!Number.isFinite(need)) need = 5;
+  need = Math.max(2, Math.min(60, need));
   if(editingBossId){
     const b = state.bosses.find(x => x.id === editingBossId);
     if(b){
-      const dmg = b.maxHp - b.hp;
-      b.name = name; b.attr = bossAttr;
-      if(hp !== b.maxHp){ b.maxHp = hp; b.hp = Math.max(1, hp - dmg); }
+      b.name = name; b.tag = bossTag; b.attr = SK(bossTag).attr;
+      b.need = Math.max(need, 1);
+      if(b.log.length > b.need) b.log.length = b.need - 1;   // never auto-slay by shrinking
     }
   }else{
-    state.bosses.push(mkBoss(name, bossAttr, hp));
+    state.bosses.push(mkBoss(name, bossTag, need));
   }
   save(); render(); closeBossModal();
 }
@@ -1731,7 +1950,7 @@ function renderTimerBar(){
 }
 
 /* ===== quest sheet (add / edit) ===== */
-let formAttr = "body", formType = "daily";
+let formAttr = "body", formType = "daily", formTag = "training", formTagTouched = false;
 function openSheet(id){
   editingId = id || null;
   const q = id ? state.quests.find(x => x.id === id) : null;
@@ -1739,6 +1958,8 @@ function openSheet(id){
   $("#f-name").value = q ? q.name : "";
   $("#f-xp").value = q ? q.xp : 20;
   formAttr = q ? q.attr : "body";
+  formTag = q && q.tag && SK(q.tag) ? q.tag : (skillsFor(formAttr)[0] || {}).id;
+  formTagTouched = !!q;
   formType = q ? q.type : "daily";
   paintSheet();
   $("#modal").classList.add("on");
@@ -1749,6 +1970,9 @@ function paintSheet(){
   $("#f-attr").innerHTML = Object.keys(ATTRS).map(k =>
     '<button class="chip' + (k === formAttr ? " on" : "") + '" data-attr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
     '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#f-tag").innerHTML = skillsFor(formAttr).map(o => o.id).map(k =>
+    '<button class="chip' + (k === formTag ? " on" : "") + '" data-ftag="' + k + '" style="--chipcol:' + ATTRS[formAttr].color + '">' +
+    skillName(k) + '</button>').join("");
   document.querySelectorAll("#f-type button").forEach(b => b.classList.toggle("on", b.dataset.v === formType));
   $("#f-xp-quick").innerHTML = [10,20,30,50,75].map(v => '<button class="chip num" data-xp="' + v + '">' + v + '</button>').join("");
 }
@@ -1758,7 +1982,8 @@ function saveSheet(){
   let xp = parseInt($("#f-xp").value, 10);
   if(!Number.isFinite(xp)) xp = 20;
   xp = Math.max(5, Math.min(500, xp));
-  upsertQuest({ name, attr: formAttr, xp, type: formType });
+  upsertQuest({ name, attr: formAttr, xp, type: formType,
+                tag: formTagTouched ? formTag : classify(name, formAttr) });
   closeSheet();
 }
 
@@ -1832,6 +2057,9 @@ document.addEventListener("click", e => {
           }, 2600);
         }
         break;
+      case "attr-toggle": openAttr = openAttr === id ? null : id; render(); break;
+      case "skill-new":  openSkillModal(null); break;
+      case "skill-edit": openSkillModal(id); break;
       case "boss-new":  openBossModal(null); break;
       case "boss-edit": openBossModal(id); break;
       case "import-pack": openPackModal(); break;
@@ -1866,7 +2094,13 @@ document.addEventListener("click", e => {
   }
 
   const chip = e.target.closest("[data-attr]");
-  if(chip){ formAttr = chip.dataset.attr; paintSheet(); return; }
+  if(chip){
+    formAttr = chip.dataset.attr;
+    if(!SK(formTag) || SK(formTag).attr !== formAttr){ formTag = (skillsFor(formAttr)[0] || {}).id; formTagTouched = false; }
+    paintSheet(); return;
+  }
+  const ftag = e.target.closest("[data-ftag]");
+  if(ftag){ formTag = ftag.dataset.ftag; formTagTouched = true; paintSheet(); return; }
   const seg = e.target.closest("#f-type [data-v]");
   if(seg){ formType = seg.dataset.v; paintSheet(); return; }
   const qx = e.target.closest("[data-xp]");
@@ -1884,6 +2118,19 @@ document.addEventListener("click", e => {
   if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
   if(e.target.id === "r-save"){ saveRewardModal(); return; }
   if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  if(e.target.id === "s-save"){ saveSkillModal(); return; }
+  if(e.target.id === "s-cancel" || e.target.id === "skillmodal"){ closeSkillModal(); return; }
+  if(e.target.id === "s-delete"){
+    const del = e.target;
+    if(del.classList.contains("arm")){ retireSkill(editingSkillId); closeSkillModal(); }
+    else{
+      del.classList.add("arm"); del.textContent = "Retire?";
+      setTimeout(() => { del.classList.remove("arm"); del.textContent = "Retire"; }, 2600);
+    }
+    return;
+  }
+  const sattr = e.target.closest("[data-sattr]");
+  if(sattr){ skillAttr = sattr.dataset.sattr; paintSkillModal(); return; }
   if(e.target.id === "b-save"){ saveBossModal(); return; }
   if(e.target.id === "b-cancel" || e.target.id === "bossmodal"){ closeBossModal(); return; }
   if(e.target.id === "b-delete"){
@@ -1898,7 +2145,11 @@ document.addEventListener("click", e => {
     return;
   }
   const battr = e.target.closest("[data-battr]");
-  if(battr){ bossAttr = battr.dataset.battr; paintBossModal(); return; }
+  if(battr){ bossAttr = battr.dataset.battr; bossTag = (skillsFor(bossAttr)[0] || {}).id; paintBossModal(); return; }
+  const btag = e.target.closest("[data-btag]");
+  if(btag){ bossTag = btag.dataset.btag; paintBossModal(); return; }
+  const foe = e.target.closest("[data-foe]");
+  if(foe){ $("#b-name").value = foe.dataset.foe; return; }
   const might = e.target.closest("[data-might]");
   if(might){ $("#b-hp").value = might.dataset.might; return; }
   if(e.target.closest("#victory")){ hideVictory(); return; }
@@ -1907,7 +2158,7 @@ document.addEventListener("click", e => {
   if(e.target.closest("#levelup")){ hideLevelUp(); return; }
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); hideLevelUp(); hideVictory(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); hideLevelUp(); hideVictory(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
