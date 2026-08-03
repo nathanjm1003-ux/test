@@ -1,0 +1,2710 @@
+<title>Life Quest — Character Sheet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root{
+    --bg:#E8DCC0; --surface:#F3EAD3; --raised:#F9F2DF; --line:#C3AF83; --line-soft:#D9CCA6;
+    --text:#2E2413; --muted:#6E5D40; --faint:#94825F;
+    --accent:#96701C; --accent-strong:#7A5A12; --accent-soft:#E5D5A6;
+    --crimson:#7E2C20; --crimson-strong:#5F1F16;
+    --shadow:0 1px 2px rgba(62,48,20,.14), 0 8px 22px rgba(62,48,20,.13);
+    --overlay:rgba(43,32,14,.5);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171208; --surface:#221B0D; --raised:#2B2312; --line:#4A3B20; --line-soft:#372C16;
+      --text:#EDE2C2; --muted:#A99878; --faint:#7C6D50;
+      --accent:#D9A94E; --accent-strong:#E9BE68; --accent-soft:#3B2F14;
+      --crimson:#A8442E; --crimson-strong:#C25940;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.45);
+      --overlay:rgba(10,7,2,.66);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#E8DCC0; --surface:#F3EAD3; --raised:#F9F2DF; --line:#C3AF83; --line-soft:#D9CCA6;
+    --text:#2E2413; --muted:#6E5D40; --faint:#94825F;
+    --accent:#96701C; --accent-strong:#7A5A12; --accent-soft:#E5D5A6;
+    --crimson:#7E2C20; --crimson-strong:#5F1F16;
+    --shadow:0 1px 2px rgba(62,48,20,.14), 0 8px 22px rgba(62,48,20,.13);
+    --overlay:rgba(43,32,14,.5);
+  }
+  :root[data-theme="dark"]{
+    --bg:#171208; --surface:#221B0D; --raised:#2B2312; --line:#4A3B20; --line-soft:#372C16;
+    --text:#EDE2C2; --muted:#A99878; --faint:#7C6D50;
+    --accent:#D9A94E; --accent-strong:#E9BE68; --accent-soft:#3B2F14;
+    --crimson:#A8442E; --crimson-strong:#C25940;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.45);
+    --overlay:rgba(10,7,2,.66);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(140% 100% at 50% 0%, color-mix(in srgb, var(--raised) 45%, transparent), transparent 55%),
+      radial-gradient(120% 120% at 50% 110%, color-mix(in srgb, var(--line) 22%, transparent), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+  }
+  .serif{ font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .num{ font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric:tabular-nums; }
+  button{ font:inherit; color:inherit; background:none; border:none; padding:0; cursor:pointer; }
+  button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  input{ font:inherit; color:inherit; }
+
+  /* ---------- boot ---------- */
+  #boot{
+    position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; gap:14px;
+    align-items:center; justify-content:center; background:var(--bg);
+    transition:opacity .35s ease;
+  }
+  #boot.gone{ opacity:0; pointer-events:none; }
+  .boot-gem{ width:34px; height:34px; transform:rotate(45deg); border-radius:7px;
+    background:linear-gradient(135deg, var(--crimson), var(--accent));
+    animation:bootPulse 1.1s ease-in-out infinite; }
+  #boot p{ margin:0; color:var(--muted); font-size:13px; letter-spacing:.14em; text-transform:uppercase; }
+  @keyframes bootPulse{ 0%,100%{ transform:rotate(45deg) scale(1); opacity:.85; } 50%{ transform:rotate(45deg) scale(1.12); opacity:1; } }
+  @media (prefers-reduced-motion: reduce){
+    .boot-gem{ animation:none; }
+    *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
+  }
+
+  /* ---------- shell ---------- */
+  #app{ max-width:480px; margin:0 auto; padding:16px 16px calc(86px + env(safe-area-inset-bottom)); }
+  .view{ display:none; flex-direction:column; gap:16px; }
+  .view.on{ display:flex; }
+  .screen-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:4px 2px 0; }
+  .screen-head h1{ margin:0; font-size:24px; letter-spacing:.06em; font-variant:small-caps; color:var(--crimson); }
+  .screen-head .sub{ color:var(--muted); font-size:13px; }
+
+  /* ---------- character card ---------- */
+  .char{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow); padding:18px 16px 16px; position:relative;
+  }
+  .char::before, .wallet::before{
+    content:""; position:absolute; inset:5px; border:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    border-radius:11px; pointer-events:none;
+  }
+  .char::after, .wallet::after{
+    content:""; position:absolute; top:-5px; left:50%; width:9px; height:9px;
+    background:var(--crimson); transform:translateX(-50%) rotate(45deg); border-radius:2px;
+  }
+  .wallet{ position:relative; }
+  .wallet::after{ background:var(--accent); }
+  .char-top{ display:flex; align-items:center; gap:16px; }
+  .ring-wrap{ position:relative; width:76px; height:76px; flex:none; }
+  .ring-wrap svg{ display:block; width:76px; height:76px; }
+  .ring-bg{ stroke:var(--line); }
+  .ring-fg{ stroke:var(--accent); transition:stroke-dashoffset .5s ease; }
+  .ring-lvl{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-lvl b{ font-size:26px; line-height:1; }
+  .ring-lvl span{ font-size:9px; letter-spacing:.16em; color:var(--muted); text-transform:uppercase; margin-top:2px; }
+  .char-id{ min-width:0; flex:1; }
+  .char-title{ margin:0; font-size:23px; line-height:1.15; text-wrap:balance; font-variant:small-caps; letter-spacing:.04em; }
+  .char-sub{ margin:3px 0 0; color:var(--muted); font-size:13px; }
+  .char-xp{ margin-top:10px; }
+  .xp-row{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .bar{ height:8px; border-radius:99px; background:var(--line-soft); overflow:hidden; }
+  .bar i{ display:block; height:100%; border-radius:99px; background:var(--accent); transition:width .5s ease; }
+
+  .attrs{ margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); display:flex; flex-direction:column; gap:10px; }
+  .attr{ display:grid; grid-template-columns:26px 1fr auto; grid-template-rows:auto auto; column-gap:10px; row-gap:4px; align-items:center; }
+  .gem{ grid-row:1 / span 2; width:22px; height:22px; border-radius:5px; transform:rotate(45deg);
+    display:flex; align-items:center; justify-content:center; margin:0 auto; }
+  .gem b{ transform:rotate(-45deg); font-size:10px; color:#fff; font-weight:700; }
+  .attr-name{ font-size:13px; font-weight:600; }
+  .attr-name small{ color:var(--faint); font-weight:400; margin-left:6px; }
+  .attr-lvl{ font-size:12px; color:var(--muted); }
+  .attr{ width:100%; text-align:left; background:none; border:none; }
+  .attr .bar{ grid-column:2 / span 2; height:6px; }
+  .attr[aria-expanded="true"] .attr-name{ color:var(--crimson); }
+  .skills{ display:flex; flex-direction:column; gap:7px; margin:-2px 0 4px 36px;
+    padding-left:12px; border-left:2px solid var(--line-soft); }
+  .skill{ display:grid; grid-template-columns:1fr auto; column-gap:8px; row-gap:3px; align-items:baseline; }
+  .skill-name{ font-size:12px; font-weight:600; color:var(--muted); }
+  .skill-lvl{ font-size:11px; color:var(--faint); }
+  .skill .bar{ grid-column:1 / span 2; height:4px; }
+  .skill-xp{ display:none; }
+  .skill-empty{ font-size:12px; color:var(--faint); }
+  .skillrow{ display:flex; gap:10px; align-items:flex-start; background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; box-shadow:var(--shadow); }
+  .skillrow .gem{ margin:4px 2px 0 0; }
+  .skillrow-list{ flex:1; display:flex; flex-wrap:wrap; gap:6px; }
+  .skillrow-list .chip{ font-size:12px; padding:5px 10px; }
+  .skillrow-list .chip b{ color:var(--accent-strong); margin-left:3px; }
+
+  /* ---------- sections & quest rows ---------- */
+  .sect{ display:flex; flex-direction:column; gap:8px; }
+  .sect-label{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--crimson); font-weight:700;
+    padding:2px 2px 5px; display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .sect-label span + span{ color:var(--muted); font-weight:500; }
+  .q{
+    display:flex; align-items:center; gap:12px; text-align:left; width:100%;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; box-shadow:var(--shadow); transition:transform .08s ease;
+  }
+  .q:active{ transform:scale(.985); }
+  .q .tick{
+    width:26px; height:26px; flex:none; border-radius:50%;
+    border:2px solid var(--line); display:flex; align-items:center; justify-content:center;
+  }
+  .q.done{ opacity:.62; }
+  .q.done .tick{ border-color:var(--qcol, var(--accent)); background:var(--qcol, var(--accent)); }
+  .q.done .tick::after{ content:""; width:6px; height:11px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg) translate(-1px,-1px); }
+  .q.done .q-name{ text-decoration:line-through; text-decoration-color:var(--faint); }
+  .q-main{ min-width:0; flex:1; }
+  .q-name{ font-weight:600; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .q-meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:2px; }
+  .dot{ width:7px; height:7px; border-radius:2px; transform:rotate(45deg); display:inline-block; }
+  .streak{ color:var(--accent-strong); font-weight:600; }
+  .q-xp{ flex:none; font-size:13px; color:var(--muted); }
+  .empty{ color:var(--muted); font-size:14px; text-align:center; padding:28px 12px; background:var(--surface); border:1px dashed var(--line); border-radius:14px; }
+
+  /* ---------- quest board ---------- */
+  .offer{
+    background:var(--surface); border:1px dashed var(--accent); border-radius:14px;
+    padding:12px 14px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--shadow);
+  }
+  .offer-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .offer-reason{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-strong); font-weight:700; }
+  .offer-name{ font-weight:600; font-size:15px; line-height:1.3; }
+  .offer .q-meta{ margin-top:0; }
+  .offer-foot{ display:flex; align-items:center; gap:10px; margin-top:2px; }
+  .offer-foot .btn{ padding:7px 16px; font-size:13px; }
+  .offer-xp{ margin-left:auto; font-weight:700; font-size:14px; color:var(--accent-strong); }
+  .offer.accepted{ border-style:solid; opacity:.6; }
+  .offer-accepted-note{ font-size:13px; color:var(--muted); }
+  .offer .icon-btn{ width:30px; height:30px; }
+
+  /* ---------- calendar strip ---------- */
+  .cal{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  .cal-row b{ color:var(--text); font-weight:600; margin-right:6px; }
+  .cal-busy{ color:var(--accent-strong); font-weight:700; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+  .cal.cal-err{ font-size:12px; border-style:dashed; }
+
+  /* ---------- quest pack ---------- */
+  .icon-btn.wide{ width:auto; padding:0 12px; font-size:13px; }
+  .icon-btn.wide.arm{ background:#B3432E; border-color:#B3432E; color:#fff; }
+  .pack-hint{ margin:0; font-size:13px; color:var(--muted); }
+  .pack-ex{ margin:0; font-size:11px; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:8px 10px; overflow-x:auto; color:var(--muted); }
+  .pack-err{ margin:0; font-size:13px; color:#C24A33; min-height:1em; }
+  textarea.f-input{ resize:vertical; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; line-height:1.5; }
+
+  /* ---------- rewards ---------- */
+  .wallet{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow); display:flex; align-items:center; gap:14px; }
+  .coin-gem{ width:34px; height:34px; flex:none; border-radius:8px; transform:rotate(45deg); margin:4px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-strong)); }
+  .wallet-n{ font-size:30px; line-height:1; }
+  .wallet small{ display:block; color:var(--muted); font-size:12px; margin-top:3px; }
+  .rw-cost{ font-weight:700; color:var(--accent-strong); }
+  .btn.small{ padding:7px 12px; font-size:13px; white-space:nowrap; }
+  .btn.off{ opacity:.45; pointer-events:none; }
+  .gold-sub{ color:var(--accent-strong); font-weight:600; }
+
+  /* ---------- quests manage ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--crimson); color:#F6EFDC; font-weight:600; font-size:14px;
+    border-radius:10px; padding:9px 14px; border:1px solid var(--crimson-strong);
+  }
+  .btn.ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); font-weight:500; }
+  .btn.ghost.arm{ background:#8B3325; color:#F6EFDC; border-color:#8B3325; }
+  .mq{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow); }
+  .mq .q-name{ white-space:normal; line-height:1.25; }
+  .mq .q-main{ flex:1; min-width:0; }
+  .icon-btn{ flex:none; width:34px; height:34px; border-radius:9px; border:1px solid var(--line); color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .icon-btn.danger.arm{ background:#B3432E; border-color:#B3432E; color:#fff; font-size:11px; width:auto; padding:0 9px; }
+
+  /* ---------- history ---------- */
+  .day-label{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); padding:6px 2px 0; }
+  .h-item{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
+  .h-time{ flex:none; font-size:12px; color:var(--faint); width:44px; }
+  .h-main{ flex:1; min-width:0; font-size:14px; }
+  .h-main small{ display:block; color:var(--muted); font-size:12px; }
+  .h-xp{ flex:none; font-size:13px; font-weight:600; }
+  .lu-badge{ display:inline-block; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-strong); border:1px solid var(--accent); border-radius:99px; padding:1px 7px; margin-left:6px; }
+
+  /* ---------- tab bar ---------- */
+  #tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    display:flex; justify-content:center; gap:4px;
+    background:color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  }
+  .tab{ flex:1; max-width:150px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:5px 0; border-radius:10px; color:var(--faint); font-size:11px; font-weight:600; letter-spacing:.04em; }
+  .tab svg{ width:21px; height:21px; }
+  .tab.on{ color:var(--accent-strong); }
+
+  /* ---------- boss battles ---------- */
+  .sect-add{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--crimson); font-weight:700;
+    border:1px solid color-mix(in srgb, var(--crimson) 40%, transparent); border-radius:99px; padding:2px 10px; }
+  .boss{ display:flex; gap:12px; width:100%; text-align:left; align-items:flex-start; position:relative;
+    background:color-mix(in srgb, var(--crimson) 7%, var(--surface));
+    border:1px solid color-mix(in srgb, var(--crimson) 45%, var(--line));
+    border-radius:14px; padding:14px; box-shadow:var(--shadow); }
+  .boss:active{ transform:scale(.985); }
+  .boss-ic{ flex:none; width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--crimson) 16%, transparent); color:var(--crimson);
+    border:1px solid color-mix(in srgb, var(--crimson) 40%, transparent); }
+  .boss-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .boss-name{ font-weight:700; font-size:17px;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .hpbar{ height:10px; border-radius:99px; background:var(--line-soft); overflow:hidden; }
+  .hpbar i{ display:block; height:100%; border-radius:99px; transition:width .5s ease;
+    background:linear-gradient(90deg, var(--crimson-strong), var(--crimson)); }
+  .hp-text{ font-size:12px; color:var(--muted); }
+  .struck-today{ color:var(--crimson); font-weight:700; }
+  .foe-picks{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .dmgfloat{ position:absolute; right:16px; top:6px; font-weight:800; font-size:18px; pointer-events:none;
+    color:var(--crimson); font-family:ui-monospace, Menlo, monospace; animation:dmgUp .9s ease-out forwards; }
+  @keyframes dmgUp{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(-30px); } }
+  #victory{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:var(--overlay); }
+  #victory.on{ display:flex; animation:fadeIn .25s ease; }
+  .v-card{ border-color:var(--crimson); }
+  .v-card .lu-eyebrow{ color:var(--crimson); }
+  .v-name{ font-size:32px; line-height:1.1; margin:8px 0 6px; text-wrap:balance; }
+  .v-bonus{ color:var(--accent-strong); font-weight:700; }
+  #app.shake{ animation:appShake .5s ease; }
+  @keyframes appShake{ 10%,50%,90%{ transform:translateX(-3px); } 30%,70%{ transform:translateX(3px); } }
+
+  /* ---------- perk tree ---------- */
+  .treewrap{ margin:0 -6px; background:
+      radial-gradient(120% 60% at 50% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+      var(--surface);
+    border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:6px 2px 10px; overflow:hidden; }
+  .tree{ display:block; width:100%; height:auto; }
+  .trunk{ fill:color-mix(in srgb, var(--line) 78%, var(--text)); }
+  .roots{ fill:none; stroke:color-mix(in srgb, var(--line) 78%, var(--text)); stroke-width:7; stroke-linecap:round; }
+  .canopy circle{ fill:color-mix(in srgb, var(--accent) 20%, transparent); stroke:var(--accent); stroke-width:1.4; stroke-opacity:.55; }
+  .limb-bg{ fill:none; stroke:var(--line); stroke-width:7; stroke-linecap:round; }
+  .limb-live{ fill:none; stroke-width:7; stroke-linecap:round; opacity:.95; }
+  .limb-label{ font-size:10px; font-weight:800; letter-spacing:.14em; opacity:.85; }
+  .pnode{ cursor:pointer; }
+  .pnode-disc{ fill:var(--raised); }
+  .pnode-ring{ fill:none; stroke:var(--line); stroke-width:3; }
+  .pnode-glow{ opacity:.18; }
+  .pnode-ic{ color:var(--faint); }
+  .pnode.got .pnode-ic{ color:var(--pcol); }
+  .pnode.got .pnode-disc{ fill:color-mix(in srgb, var(--pcol) 16%, var(--raised)); }
+  .pnode.ready .pnode-ring{ stroke:var(--accent); stroke-dasharray:5 4; animation:nodePulse 2s ease-in-out infinite; }
+  .pnode.ready .pnode-ic{ color:var(--accent-strong); }
+  .pnode.locked{ opacity:.5; }
+  .pnode-label{ font-size:10.5px; font-weight:700; fill:var(--muted); }
+  .pnode.got .pnode-label, .pnode.ready .pnode-label{ fill:var(--text); }
+  .pnode-cost-bg{ fill:var(--accent); }
+  .pnode-cost{ font-size:11px; font-weight:800; fill:#2E2413; text-anchor:middle; }
+  .pnode:active .pnode-disc{ opacity:.75; }
+  @keyframes nodePulse{ 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.45; } }
+  .perk-status{ font-size:13px; font-weight:700; }
+  .perk-status.got{ color:var(--pcol, var(--accent-strong)); }
+  .perk-status.ready{ color:var(--accent-strong); }
+  .perk-status.locked{ color:var(--muted); font-weight:500; }
+  #p-branch{ font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+  .skillrow-add{ flex:none; align-self:center; width:30px; height:30px; border-radius:9px;
+    border:1px dashed var(--line); color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .branch{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:0; }
+  .branch + .branch{ margin-top:10px; }
+  .branch-head{ display:flex; align-items:center; gap:10px; padding-bottom:8px; }
+  .branch-head .gem{ margin:0; }
+  .branch-name{ flex:1; font-weight:700; font-size:15px; font-variant:small-caps; letter-spacing:.05em; }
+  .branch-lvl{ font-size:12px; color:var(--muted); }
+  .perk{ display:flex; gap:11px; text-align:left; width:100%; padding:9px 0 9px 4px; position:relative; align-items:flex-start; }
+  .perk + .perk{ border-top:1px solid var(--line-soft); }
+  .perk::before{ content:""; position:absolute; left:18px; top:0; bottom:0; width:2px; background:var(--line-soft); }
+  .perk:first-of-type::before{ top:50%; }
+  .perk:last-child::before{ bottom:50%; }
+  .perk-ic{ position:relative; z-index:1; flex:none; width:30px; height:30px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; margin-left:4px;
+    border:2px solid var(--line); background:var(--surface); color:var(--faint); }
+  .perk.got .perk-ic{ border-color:var(--pcol); color:var(--pcol); background:color-mix(in srgb, var(--pcol) 14%, var(--surface)); }
+  .perk.ready .perk-ic{ border-color:var(--accent); color:var(--accent-strong); border-style:dashed; }
+  .perk-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .perk-name{ font-weight:700; font-size:14px; display:flex; gap:8px; align-items:baseline; }
+  .perk.locked .perk-name{ color:var(--muted); }
+  .perk-cost{ font-size:11px; color:var(--accent-strong); border:1px solid var(--accent); border-radius:99px; padding:0 6px; }
+  .perk-desc{ font-size:12px; color:var(--muted); line-height:1.35; }
+  .perk.locked .perk-desc{ opacity:.65; }
+  .perk-why{ font-size:11px; color:var(--faint); }
+  .perk-why.ready{ color:var(--accent-strong); font-weight:700; }
+  .tab svg{ width:21px; height:21px; }
+  #tabbar{ gap:0; }
+  .tab{ padding:5px 2px; font-size:10px; }
+
+  /* ---------- achievements ---------- */
+  .badges{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  .badge{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px 8px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+  .badge.locked{ opacity:.45; border-style:dashed; box-shadow:none; }
+  .badge-ic{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent) 16%, transparent); border:2px solid var(--accent); color:var(--accent-strong); }
+  .badge.locked .badge-ic{ border-color:var(--line); color:var(--faint); background:transparent; }
+  .badge-name{ font-size:10px; line-height:1.15; text-align:center; color:var(--muted); font-weight:600; }
+  .badge:not(.locked) .badge-name{ color:var(--text); }
+
+  /* ---------- effects ---------- */
+  #fx2{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:44; }
+  .tick.pop{ animation:tickPop .45s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes tickPop{ 0%{ transform:scale(.3); } 60%{ transform:scale(1.3); } 100%{ transform:scale(1); } }
+  .btn:active, .icon-btn:active, .tab:active{ transform:scale(.95); }
+  #levelup.on::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(circle at 50% 42%, rgba(233,190,104,.5), transparent 60%);
+    animation:luFlash .8s ease-out forwards;
+  }
+  @keyframes luFlash{ from{ opacity:1; } to{ opacity:0; } }
+
+  /* ---------- timer ---------- */
+  #timerbar{
+    position:fixed; left:12px; right:12px; bottom:calc(78px + env(safe-area-inset-bottom)); z-index:30;
+    display:none; align-items:center; gap:10px; max-width:456px; margin:0 auto;
+    background:var(--raised); border:1px solid var(--accent); border-radius:14px;
+    padding:10px 14px; box-shadow:var(--shadow); color:var(--muted);
+  }
+  #timerbar.on{ display:flex; }
+  #timerbar.done{ border-color:var(--accent-strong); background:color-mix(in srgb, var(--accent-soft) 55%, var(--raised)); }
+  .tb-name{ flex:1; min-width:0; font-weight:600; font-size:14px; color:var(--text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .tb-time{ font-size:18px; color:var(--accent-strong); }
+  #timerbar .icon-btn{ width:30px; height:30px; font-size:12px; }
+  .q-timer{ flex:none; display:inline-flex; align-items:center; gap:4px;
+    border:1px solid var(--line); border-radius:99px; padding:3px 9px;
+    font-size:12px; color:var(--muted); }
+  .q-timer.live{ border-color:var(--accent); color:var(--accent-strong); font-weight:700; }
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; left:50%; bottom:calc(140px + env(safe-area-inset-bottom)); z-index:40;
+    transform:translate(-50%, 16px); opacity:0; pointer-events:none;
+    display:flex; align-items:center; gap:12px;
+    background:var(--raised); border:1px solid var(--line); box-shadow:var(--shadow);
+    border-radius:99px; padding:10px 16px; font-size:14px; white-space:nowrap;
+    transition:transform .3s cubic-bezier(.2,1.4,.4,1), opacity .22s ease;
+  }
+  #toast.on{ transform:translate(-50%,0); opacity:1; pointer-events:auto; }
+  #toast .t-xp{ font-weight:700; }
+  #toast .t-sub{ color:var(--muted); font-size:13px; }
+  #toast .t-undo{ color:var(--accent-strong); font-weight:700; font-size:13px; letter-spacing:.05em; }
+
+  /* ---------- level up ---------- */
+  #levelup{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:var(--overlay); }
+  #levelup.on{ display:flex; animation:fadeIn .25s ease; }
+  #fx{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .lu-card{ position:relative; text-align:center; padding:34px 40px; background:var(--raised); border:1px solid var(--accent); border-radius:20px; box-shadow:var(--shadow); animation:luPop .4s cubic-bezier(.2,1.4,.4,1); max-width:82vw; }
+  .lu-eyebrow{ font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--accent-strong); font-weight:700; }
+  .lu-level{ font-size:64px; line-height:1.05; margin:6px 0 2px; }
+  .lu-title{ font-size:19px; color:var(--muted); }
+  .lu-new{ margin-top:8px; font-size:13px; color:var(--accent-strong); font-weight:600; }
+  @keyframes luPop{ from{ transform:scale(.7); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+
+  /* ---------- modal ---------- */
+  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal, #campmodal, #perkmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on, #campmodal.on, #perkmodal.on{ display:flex; }
+  #campmodal .sheet{ max-height:92vh; overflow-y:auto; }
+
+  /* ---------- campaigns ---------- */
+  .camp{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:13px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:7px; }
+  .camp + .camp{ margin-top:8px; }
+  .camp-top{ display:flex; align-items:center; gap:10px; }
+  .camp-name{ flex:1; font-weight:700; font-size:16px; line-height:1.2;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .camp .icon-btn{ width:28px; height:28px; font-size:12px; }
+  .camp .icon-btn.arm{ background:#B3432E; border-color:#B3432E; color:#fff; width:auto; padding:0 8px; font-size:11px; }
+  .phases{ list-style:none; margin:2px 0 0; padding:0; display:flex; flex-direction:column; gap:0; }
+  .phase{ display:flex; align-items:center; gap:9px; padding:5px 0 5px 3px; position:relative; font-size:13px; }
+  .phase::before{ content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--line-soft); }
+  .phase:first-child::before{ top:50%; }
+  .phase:last-child::before{ bottom:50%; }
+  .phase-dot{ position:relative; z-index:1; flex:none; width:9px; height:9px; border-radius:50%;
+    background:var(--surface); border:2px solid var(--line); margin-left:2px; }
+  .phase.done .phase-dot{ background:var(--crimson); border-color:var(--crimson); }
+  .phase.now .phase-dot{ border-color:var(--accent); background:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .phase-name{ flex:1; min-width:0; color:var(--muted); }
+  .phase.now .phase-name{ color:var(--text); font-weight:700; }
+  .phase.done .phase-name{ color:var(--faint); text-decoration:line-through; }
+  .phase-meta{ font-size:11px; color:var(--faint); white-space:nowrap; }
+  .phase.now .phase-meta{ color:var(--accent-strong); font-weight:700; }
+  .sheet{
+    width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
+    border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:16px; animation:sheetUp .28s cubic-bezier(.2,1,.3,1);
+  }
+  @keyframes sheetUp{ from{ transform:translateY(40px); opacity:.5; } to{ transform:translateY(0); opacity:1; } }
+  .sheet h2{ margin:0; font-size:19px; }
+  .f-label{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; display:block; }
+  .f-input{ width:100%; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 12px; font-size:15px; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ border:1px solid var(--line); border-radius:99px; padding:7px 12px; font-size:13px; font-weight:600; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+  .chip .dot{ width:8px; height:8px; }
+  .chip.on{ border-color:var(--chipcol, var(--accent)); color:var(--text); background:color-mix(in srgb, var(--chipcol, var(--accent)) 14%, transparent); }
+  .seg{ display:flex; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:3px; gap:3px; }
+  .seg button{ flex:1; padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; color:var(--muted); }
+  .seg button.on{ background:var(--accent-soft); color:var(--accent-strong); }
+  .xp-quick{ display:flex; gap:6px; margin-top:6px; }
+  .sheet-actions{ display:flex; gap:10px; }
+  .sheet-actions .btn{ flex:1; padding:12px; }
+</style>
+
+<div id="boot" role="status" aria-label="Loading">
+  <div class="boot-gem"></div>
+  <p>Summoning your sheet</p>
+</div>
+
+<div id="app" style="display:none">
+  <main class="view" id="view-today" aria-label="Today"></main>
+  <main class="view" id="view-quests" aria-label="Quests"></main>
+  <main class="view" id="view-perks" aria-label="Perks"></main>
+  <main class="view" id="view-rewards" aria-label="Rewards"></main>
+  <main class="view" id="view-history" aria-label="History"></main>
+</div>
+
+<nav id="tabbar" style="display:none">
+  <button class="tab on" data-tab="today" aria-label="Today">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3" transform="rotate(45 12 12)"/></svg>
+    Today
+  </button>
+  <button class="tab" data-tab="quests" aria-label="Quests">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+    Quests
+  </button>
+  <button class="tab" data-tab="perks" aria-label="Perks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9M12 9L7 5M12 9l5-4"/><circle cx="12" cy="22" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="4" r="2.4"/><circle cx="18" cy="4" r="2.4"/><circle cx="12" cy="12" r="2.4"/></svg>
+    Perks
+  </button>
+  <button class="tab" data-tab="rewards" aria-label="Rewards">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10l4 5-9 11L3 9l4-5z"/><path d="M3 9h18M12 20L8.5 9l2-5M12 20l3.5-11-2-5"/></svg>
+    Rewards
+  </button>
+  <button class="tab" data-tab="history" aria-label="History">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+    History
+  </button>
+</nav>
+
+<canvas id="fx2" aria-hidden="true"></canvas>
+
+<div id="timerbar"></div>
+
+<div id="toast"></div>
+
+<div id="levelup">
+  <canvas id="fx"></canvas>
+  <div class="lu-card">
+    <div class="lu-eyebrow">Level up</div>
+    <div class="lu-level serif" id="lu-level">2</div>
+    <div class="lu-title serif" id="lu-title">Novice</div>
+    <div class="lu-new" id="lu-new" style="display:none"></div>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h2 id="sheet-title">New quest</h2>
+    <div>
+      <label class="f-label" for="f-name">Quest name</label>
+      <input class="f-input" id="f-name" type="text" maxlength="60" placeholder="e.g. Morning run" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Feeds attribute</span>
+      <div class="chips" id="f-attr"></div>
+      <span class="f-label" style="margin-top:12px">Kind (which bosses it strikes)</span>
+      <div class="chips" id="f-tag"></div>
+    </div>
+    <div>
+      <span class="f-label">Type</span>
+      <div class="seg" id="f-type">
+        <button data-v="daily">Daily</button>
+        <button data-v="weekly">Weekly</button>
+        <button data-v="oneoff">One-off</button>
+      </div>
+    </div>
+    <div>
+      <label class="f-label" for="f-xp">XP reward</label>
+      <input class="f-input num" id="f-xp" type="number" min="5" max="500" step="5" inputmode="numeric">
+      <div class="xp-quick" id="f-xp-quick"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="f-cancel">Cancel</button>
+      <button class="btn" id="f-save">Save quest</button>
+    </div>
+  </div>
+</div>
+
+<div id="victory">
+  <div class="lu-card v-card">
+    <div class="lu-eyebrow">Boss vanquished</div>
+    <div class="v-name serif" id="v-name"></div>
+    <div class="v-bonus num" id="v-bonus"></div>
+  </div>
+</div>
+
+<div id="perkmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="p-title">
+    <span id="p-branch"></span>
+    <h2 id="p-title" style="margin-top:-8px"></h2>
+    <p id="p-desc" style="margin:0; font-size:15px; line-height:1.4"></p>
+    <p id="p-status" class="perk-status" style="margin:0"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="p-close">Close</button>
+      <button class="btn" id="p-unlock">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<div id="campmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="camp-title">
+    <h2 id="camp-title">New campaign</h2>
+    <div>
+      <label class="f-label" for="c-name">The long goal</label>
+      <input class="f-input" id="c-name" type="text" maxlength="60" placeholder="e.g. Be gig-ready on trombone" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Branch</span>
+      <div class="chips" id="c-attr"></div>
+      <span class="f-label" style="margin-top:12px">Skill it trains</span>
+      <div class="chips" id="c-tag"></div>
+    </div>
+    <div>
+      <label class="f-label" for="c-end">Target date</label>
+      <input class="f-input" id="c-end" type="date">
+      <div class="xp-quick">
+        <button class="chip" data-weeks="4">1 month</button>
+        <button class="chip" data-weeks="12">3 months</button>
+        <button class="chip" data-weeks="26">6 months</button>
+      </div>
+    </div>
+    <div>
+      <label class="f-label" for="c-per">Sessions per week</label>
+      <input class="f-input num" id="c-per" type="number" min="1" max="14" step="1" inputmode="numeric">
+    </div>
+    <p class="pack-hint" id="c-preview"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="c-cancel">Cancel</button>
+      <button class="btn" id="c-save">Begin campaign</button>
+    </div>
+  </div>
+</div>
+
+<div id="skillmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+    <h2 id="skill-title">New skill</h2>
+    <div>
+      <label class="f-label" for="s-name">Skill name</label>
+      <input class="f-input" id="s-name" type="text" maxlength="24" placeholder="e.g. Coding, Climbing, Spanish" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Branch</span>
+      <div class="chips" id="s-attr"></div>
+    </div>
+    <div>
+      <label class="f-label" for="s-kw">Auto-tag words (comma separated)</label>
+      <input class="f-input" id="s-kw" type="text" maxlength="120" placeholder="code, leetcode, debug, ship" autocomplete="off">
+      <p class="pack-hint" style="margin-top:6px">Quests whose names contain these words are filed under this skill automatically.</p>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="s-cancel">Cancel</button>
+      <button class="btn ghost" id="s-delete" style="display:none">Retire</button>
+      <button class="btn" id="s-save">Save skill</button>
+    </div>
+  </div>
+</div>
+
+<div id="bossmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="boss-title">
+    <h2 id="boss-title">Challenge a boss</h2>
+    <div>
+      <label class="f-label" for="b-name">Name the foe (your big goal)</label>
+      <input class="f-input" id="b-name" type="text" maxlength="60" placeholder="e.g. The Unwritten Application" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Branch</span>
+      <div class="chips" id="b-attr"></div>
+      <span class="f-label" style="margin-top:12px">Struck by</span>
+      <div class="chips" id="b-tag"></div>
+      <div class="foe-picks" id="b-foes"></div>
+    </div>
+    <div>
+      <label class="f-label" for="b-hp">Might — sessions to fell it</label>
+      <input class="f-input num" id="b-hp" type="number" min="2" max="60" step="1" inputmode="numeric">
+      <div class="xp-quick">
+        <button class="chip" data-might="3">Lesser · 3</button>
+        <button class="chip" data-might="5">Fearsome · 5</button>
+        <button class="chip" data-might="10">Legendary · 10</button>
+        <button class="chip" data-might="20">Mythic · 20</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="b-cancel">Cancel</button>
+      <button class="btn ghost" id="b-delete" style="display:none">Abandon</button>
+      <button class="btn" id="b-save">To battle</button>
+    </div>
+  </div>
+</div>
+
+<div id="rewardmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reward-title">
+    <h2 id="reward-title">New reward</h2>
+    <div>
+      <label class="f-label" for="r-name">Reward</label>
+      <input class="f-input" id="r-name" type="text" maxlength="60" placeholder="e.g. Movie night, zero guilt" autocomplete="off">
+    </div>
+    <div>
+      <label class="f-label" for="r-cost">Cost in gold</label>
+      <input class="f-input num" id="r-cost" type="number" min="10" max="5000" step="10" inputmode="numeric">
+      <div class="xp-quick" id="r-cost-quick"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="r-cancel">Cancel</button>
+      <button class="btn" id="r-save">Save reward</button>
+    </div>
+  </div>
+</div>
+
+<div id="packmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pack-title">
+    <h2 id="pack-title">Import quest pack</h2>
+    <p class="pack-hint">Paste a pack as JSON — ask Claude to write one from your goals. Importing replaces the current pack; the board relearns your tastes from scratch.</p>
+    <pre class="pack-ex">{"name":"My pack","lib":{"craft":[
+  {"t":["easy version","medium","hard"],"habit":true}
+]}}</pre>
+    <textarea id="pack-text" class="f-input" rows="7" spellcheck="false" placeholder="Paste pack JSON here"></textarea>
+    <p class="pack-err" id="pack-err"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="pack-cancel">Cancel</button>
+      <button class="btn" id="pack-save">Import pack</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== constants ===== */
+const KEY = "life-rpg-v1";
+const ATTRS = {
+  body:   { name:"Body",   desc:"fitness & health",   color:"#A63D2E" },
+  mind:   { name:"Mind",   desc:"study & learning",   color:"#5D4E9C" },
+  grind:  { name:"Grind",  desc:"work & money",       color:"#4E7A46" },
+  craft:  { name:"Craft",  desc:"creative projects",  color:"#3E7580" },
+  social: { name:"Social", desc:"relationships",      color:"#A34E68" },
+};
+/* Skills are sub-abilities of an attribute. They live in state, so any can be
+   created, renamed, or retired in-app; `kw` drives auto-tagging of quests and
+   `foes` seeds boss-name suggestions. Each tracks its own XP and level. */
+function DEFAULT_SKILLS(){
+  return [
+    { id:"lifting",  attr:"body",   name:"Lifting",     xp:0, kw:["gym","workout","work out","lift","strength","push-up","pushup","squat","weights","training"], foes:["The Gym Rat","The Iron Beast"] },
+    { id:"running",  attr:"body",   name:"Running",     xp:0, kw:["run","jog","sprint","mile","5k","cardio"], foes:["The Winded Lung","The First Mile"] },
+    { id:"walking",  attr:"body",   name:"Walking",     xp:0, gen:1, kw:["walk","step","hike","kayak","charlie","outside","daylight","stroll","bike","park","falls","move","movement"], foes:["The Restless Hound","The Long Road"] },
+    { id:"recovery", attr:"body",   name:"Recovery",    xp:0, kw:["sleep","bed","stretch","wind down","screen","mobility","nap","rest","water","snack","vegetable","eat","meal","yoga","dentist","appointment","doctor","shower"], foes:["The Midnight Scroll","The Sleep Debt"] },
+    { id:"reading",  attr:"mind",   name:"Reading",     xp:0, kw:["read","page","audiobook","book","chapter","listen"], foes:["The Unread Shelf","The Dusty Tome"] },
+    { id:"study",    attr:"mind",   name:"Study",       xp:0, gen:1, kw:["study","neuro","learn","concept","language","problem","puzzle","article","video","educational","teach","summar"], foes:["The Unlearned Art","The Exam Ahead"] },
+    { id:"writing",  attr:"mind",   name:"Reflection",  xp:0, kw:["journal","reflect","question","christian","faith","meditat","write"], foes:["The Unasked Question","The Quiet Doubt"] },
+    { id:"focus",    attr:"grind",  name:"Deep Work",   xp:0, kw:["deep-work","deep work","focus","block","avoid","to-do","task","priorit"], foes:["The Procrastinator","The Scattered Mind"] },
+    { id:"admin",    attr:"grind",  name:"Admin",       xp:0, gen:1, kw:["errand","clean","organi","prep","plan","review","email","inbox","form","applica","usc","supplies","list","appointment","dentist","shift"], foes:["The Orientation Application","The Paperwork Pile"] },
+    { id:"money",    attr:"grind",  name:"Money",       xp:0, kw:["budget","spend","subscription","money","save","cost","pay"], foes:["The Leaky Purse","The Empty Coffer"] },
+    { id:"trombone", attr:"craft",  name:"Trombone",    xp:0, kw:["trombone","practice","scale","instrument","rehears","horn"], foes:["The Rusty Embouchure","The Silent Horn"] },
+    { id:"origami",  attr:"craft",  name:"Origami",     xp:0, kw:["origami","fold","paper","crane"], foes:["The Thousand Cranes","The Crumpled Sheet"] },
+    { id:"making",   attr:"craft",  name:"Making",      xp:0, gen:1, kw:["create","creative","project","draft","sketch","idea","cosmere","build","piece","make","technique","tutorial"], foes:["The Unfinished Work","The Blank Page"] },
+    { id:"sharing",  attr:"craft",  name:"Sharing",     xp:0, kw:["share","post","feedback","show","publish","work-in-progress"], foes:["The Hidden Portfolio","The Locked Drawer"] },
+    { id:"partner",  attr:"social", name:"Lizzie",      xp:0, kw:["lizzie","date","girlfriend","snuggl"], foes:["The Distance","The Missed Evening"] },
+    { id:"kin",      attr:"social", name:"Family",      xp:0, kw:["mom","dad","family","lindsay","brown","parent","sibling"], foes:["The Unmade Call","The Drifting Ties"] },
+    { id:"friends",  attr:"social", name:"Friends",     xp:0, kw:["friend","ellie","skyler","madelyn","hangout","get-together","coffee","group"], foes:["The Fading Circle","The Empty Calendar"] },
+    { id:"outreach", attr:"social", name:"Outreach",    xp:0, gen:1, kw:["message","text","call","coworker","complim","note","reconnect","conversation","letter"], foes:["The Silent Phone","The Unsent Letter"] },
+  ];
+}
+const skillNeed = l => 40 + (l - 1) * 25;
+const SEED_SKILLS = DEFAULT_SKILLS();   // lookup source before `state` exists
+function allSkills(){ return (state && state.skills) || SEED_SKILLS; }
+function skillsFor(attr){ return allSkills().filter(s => s.attr === attr); }
+function SK(id){ return allSkills().find(s => s.id === id) || null; }
+function skillName(id){ const s = SK(id); return s ? s.name : "—"; }
+function foesFor(id){
+  const s = SK(id);
+  if(s && s.foes && s.foes.length) return s.foes;
+  return s ? ["The " + s.name + " Trial", "The Neglected " + s.name] : ["The Nameless Foe"];
+}
+/* longest keyword hit wins, so "deep work" beats a stray "work" */
+function classify(name, attr){
+  const pool = skillsFor(attr);
+  if(!pool.length) return null;
+  const low = name.toLowerCase();
+  let best = null, bestLen = 0;
+  for(const s of pool){
+    for(const k of (s.kw || [])){
+      if(k.length > bestLen && low.includes(k)){ best = s.id; bestLen = k.length; }
+    }
+  }
+  return best || (pool.find(s => s.gen) || pool[0]).id;
+}
+function mkSkill(name, attr, kw){
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 12) || "skill";
+  let id = base, n = 2;
+  while(SK(id)) id = base + n++;
+  return { id, attr, name, xp:0, kw: kw && kw.length ? kw : [name.toLowerCase()], foes:[] };
+}
+
+const TITLES = [[1,"Novice"],[3,"Apprentice"],[5,"Adept"],[8,"Journeyman"],[12,"Veteran"],[16,"Expert"],[21,"Master"],[27,"Grandmaster"],[34,"Legend"],[42,"Mythic"]];
+const TYPE_LABEL = { daily:"Daily", weekly:"Weekly", oneoff:"One-off" };
+
+const charNeed = l => 100 + (l-1)*50;   // XP to clear level l
+const attrNeed = l => 60 + (l-1)*30;
+
+/* ===== state ===== */
+let state = null;
+let dayCtx = null;                       // today's calendar context, memory-only
+let calInfo = { status:"off", msg:"" };  // off | loading | on | err
+let currentTab = "today";
+let editingId = null;          // quest being edited in the sheet, or null for new
+let toastTimer = null;
+let luTimer = null;
+
+function defaultRewards(){
+  return [
+    mkReward("Guilt-free YouTube hour", 60),
+    mkReward("Game session — zero guilt", 80),
+    mkReward("Order the good takeout", 120),
+    mkReward("Browse 2nd & Charles, buy something small", 150),
+    mkReward("Next audiobook credit", 200),
+    mkReward("Lazy morning — no alarm, no agenda", 250),
+  ];
+}
+function mkReward(name, cost){
+  return { id: "r" + Math.random().toString(36).slice(2,9) + Date.now().toString(36), name, cost };
+}
+function mkBoss(name, tag, need){
+  return { id: "b" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
+           name, tag, attr: SK(tag).attr, need, log: [], created: Date.now(), defeated: null };
+}
+
+function defaultState(){
+  return {
+    xp: 0,
+    gold: 0,
+    stats: { done:0, redeems:0, timer:0, bosses:0 },
+    perks: {},
+    shield: null,
+    campaigns: [],
+    skills: DEFAULT_SKILLS(),
+    badges: {},
+    rewards: defaultRewards(),
+    bosses: [ mkBoss("The Gym Rat", "lifting", 5), mkBoss("The Orientation Application", "admin", 5) ],
+    attrs: { body:0, mind:0, grind:0, craft:0, social:0 },
+    quests: [
+      mkQuest("Move for 30 minutes", "body", 30, "daily"),
+      mkQuest("Read 20 pages", "mind", 20, "daily"),
+      mkQuest("One deep-work block", "grind", 40, "daily"),
+      mkQuest("Work on a creative project", "craft", 35, "weekly"),
+      mkQuest("Reach out to a friend", "social", 25, "weekly"),
+      mkQuest("Book the dentist appointment", "body", 50, "oneoff"),
+    ],
+    history: [],
+  };
+}
+function mkQuest(name, attr, xp, type, src, tag){
+  return { id: "q" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
+           name, attr, xp, type, tag: tag || classify(name, attr),
+           streak:0, lastDone:null, lastWeek:null, done:false, prev:null, src: src || null };
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && typeof s.xp === "number" && s.attrs && Array.isArray(s.quests)){
+        if(!s.learn || !s.learn.tpl) s.learn = { tpl:{}, slot:{} };
+        if(!("pack" in s)) s.pack = null;
+        if(typeof s.gold !== "number") s.gold = s.xp || 0;   // retroactive: 1 gold per XP already earned
+        if(!Array.isArray(s.rewards)) s.rewards = defaultRewards();
+        if(!s.stats) s.stats = {
+          done: s.history.filter(h => !h.type).length,
+          redeems: s.history.filter(h => h.type === "redeem").length,
+          timer: 0,
+        };
+        if(!s.badges) s.badges = {};
+        if(typeof s.stats.bosses !== "number") s.stats.bosses = 0;
+        if(!s.perks) s.perks = {};
+        if(!("shield" in s)) s.shield = null;
+        if(!Array.isArray(s.campaigns)) s.campaigns = [];
+        if(!Array.isArray(s.skills) || !s.skills.length) s.skills = DEFAULT_SKILLS();
+        for(const sk of s.skills){ if(typeof sk.xp !== "number") sk.xp = 0; }
+        if(!Array.isArray(s.bosses)) s.bosses = [ mkBoss("The Gym Rat", "lifting", 5) ];
+        for(const q of s.quests){ if(!q.tag || !SK(q.tag)) q.tag = classify(q.name, q.attr); }
+        for(const b of s.bosses){          // HP-era bosses become session bosses
+          if(!b.tag || !SK(b.tag)) b.tag = classify(b.name, b.attr || "grind");
+          b.attr = SK(b.tag).attr;
+          if(typeof b.need !== "number"){
+            b.need = Math.max(3, Math.min(30, Math.round((b.maxHp || 300) / 100) * 2));
+            const doneFrac = b.maxHp ? (b.maxHp - (b.hp || 0)) / b.maxHp : 0;
+            const had = Math.min(b.need - 1, Math.floor(doneFrac * b.need));
+            b.log = Array.from({ length: Math.max(0, had) }, (_, i) => ({ d: "migrated-" + i, q: null }));
+            delete b.hp; delete b.maxHp;
+          }
+          if(!Array.isArray(b.log)) b.log = [];
+        }
+        return s;
+      }
+    }
+  }catch(e){ /* corrupted or unavailable storage: start fresh */ }
+  const s = defaultState();
+  s.learn = { tpl:{}, slot:{} };
+  s.pack = null;
+  return s;
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ /* storage full/unavailable */ }
+}
+
+/* ===== time helpers ===== */
+function dayKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function todayKey(){ return dayKey(new Date()); }
+function yesterdayKey(){ const d = new Date(); d.setDate(d.getDate()-1); return dayKey(d); }
+function weekKey(d){
+  // ISO week
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = (t.getDay() + 6) % 7;             // Mon=0
+  t.setDate(t.getDate() - dow + 3);             // nearest Thursday
+  const jan4 = new Date(t.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((t - jan4)/86400000 - 3 + ((jan4.getDay()+6)%7)) / 7);
+  return t.getFullYear() + "-W" + String(week).padStart(2,"0");
+}
+function thisWeek(){ return weekKey(new Date()); }
+
+/* ===== derived ===== */
+function levelInfo(xp, needFn){
+  let level = 1, rem = xp;
+  while(rem >= needFn(level)){ rem -= needFn(level); level++; }
+  return { level, into: rem, need: needFn(level) };
+}
+function titleFor(level){
+  let t = TITLES[0][1];
+  for(const [l, name] of TITLES){ if(level >= l) t = name; }
+  return t;
+}
+function effStreak(q){
+  if(q.type !== "daily") return 0;
+  const ld = q.lastDone;
+  return (ld === todayKey() || ld === yesterdayKey()) ? (q.streak || 0) : 0;
+}
+function completedNow(q){
+  if(q.type === "daily")  return q.lastDone === todayKey();
+  if(q.type === "weekly") return q.lastWeek === thisWeek();
+  return !!q.done;
+}
+
+/* ===== quest director (adaptive offer generation) ===== */
+/* Each template is 3 variants, easy -> hard; "habit" marks ones that work as dailies. */
+const QLIB = {
+  body: [
+    { t:["Take a 15-minute walk","Take a 35-minute walk","Take a 60-minute walk or hike"], habit:1 },
+    { t:["Do 2 sets of push-ups and squats","Do a 20-minute strength session","Do a 40-minute full workout"], habit:1 },
+    { t:["Stretch for 5 minutes before bed","Do 15 minutes of mobility work","Do 30 minutes of yoga"], habit:1 },
+    { t:["Swap one snack for fruit today","Eat vegetables with every meal today","Eat clean all day — nothing processed"] },
+    { t:["Be in bed by 11pm tonight","Be in bed by 10:30pm tonight","Full wind-down — no screens after 10pm"] },
+    { t:["Take the stairs all day","Hit 8,000 steps today","Hit 12,000 steps today"] },
+  ],
+  mind: [
+    { t:["Read 10 pages","Read 25 pages","Read 50 pages"], habit:1 },
+    { t:["Study one new concept for 15 minutes","Do a 30-minute focused study block","Do a 60-minute deep study session"], habit:1 },
+    { t:["Watch something educational and note 3 takeaways","Summarize an article in your own words","Teach someone something you learned this week"] },
+    { t:["Practice a language for 10 minutes","Practice a language for 20 minutes","Hold a short conversation in your target language"], habit:1 },
+    { t:["Solve one puzzle or practice problem","Solve three practice problems","Work through one hard problem end to end"] },
+  ],
+  grind: [
+    { t:["Clear 5 emails","Get the inbox under 10","Reach inbox zero"] },
+    { t:["Do one 25-minute deep-work block","Do a 50-minute deep-work block","Do two deep-work blocks back to back"], habit:1 },
+    { t:["Write down tomorrow's top 3 priorities","Plan the whole week ahead","Do a full weekly review"] },
+    { t:["Log today's spending","Review this week's budget","Audit your subscriptions and cut one"] },
+    { t:["Spend 15 minutes on the task you keep avoiding","Finish the task you keep avoiding","Clear today's entire to-do list"] },
+  ],
+  craft: [
+    { t:["Create for 15 minutes — anything counts","Put 30 minutes into your current project","Put a 60-minute session into your project"], habit:1 },
+    { t:["Jot down 3 new ideas","Fill a page with sketches or notes","Draft a complete rough piece"] },
+    { t:["Study one work you admire and note why it works","Copy a master's technique as practice","Remix a piece you admire into something new"] },
+    { t:["Share a work-in-progress with one person","Post something you made","Ask for feedback and act on one note"] },
+    { t:["Learn one new technique","Follow a tutorial start to finish","Apply a new technique to a real piece"] },
+  ],
+  social: [
+    { t:["Message a friend you haven't talked to lately","Call a friend or family member","Have a long catch-up call"], habit:1 },
+    { t:["Give someone a genuine compliment","Write someone a short thank-you note","Tell someone what they mean to you"] },
+    { t:["Plan a hangout for this week","Organize a get-together","Plan something special for someone"] },
+    { t:["Eat one meal with no phone","Spend an hour fully present with someone","Spend an evening fully present — no screens"] },
+    { t:["Ask someone how they're really doing","Have a meaningful one-on-one conversation","Reconnect with someone you've drifted from"] },
+  ],
+};
+
+/* Built-in personalized pack. Replaceable via Import on the Quests screen. */
+const DEFAULT_PACK = { name:"Nathan's Pack", lib:{
+  body: [
+    { t:["Take Charlie out for 15 minutes","Take Charlie for a proper 30-minute walk","Long walk, hike, or a kayak trip"], habit:1 },
+    { t:["Stretch for 5 minutes after your shift","Do a 15-minute post-shift workout","Do a full workout on a day off"], habit:1 },
+    { t:["Wind down by 8:30 before an early shift","Screens off 30 minutes before bed","Full sleep reset — phone out of the bedroom tonight"] },
+    { t:["Drink water through your whole shift","Get outside for 15 minutes of daylight","Hit 10,000 steps today"] },
+    { t:["Take a walk somewhere green","Walk the falls or a favorite spot","Plan and do a real outdoor adventure"] },
+  ],
+  mind: [
+    { t:["Listen to 20 minutes of your audiobook","Listen to a full chapter — no phone, just the book","A long audiobook session on a walk"], habit:1 },
+    { t:["Read 10 pages","Read 25 pages","Read 50 pages"], habit:1 },
+    { t:["15 minutes on your Exploring Christianity reading","Write down one honest question and sit with it","A full reading + journal session on the big questions"] },
+    { t:["Watch one neuroscience video","Read a neuro article and note 3 takeaways","Deep-dive a neuroscience topic for an hour"] },
+    { t:["Journal one paragraph about today","Journal properly for 15 minutes","Write a full weekly reflection"], habit:1 },
+  ],
+  grind: [
+    { t:["Prep clothes and bag for tomorrow's shift","Plan your week around your shifts","Do a full weekly review and plan"] },
+    { t:["15 minutes on the orientation leader application","Draft a full application answer","Finish and submit the application"] },
+    { t:["Knock out one USC prep item","Clear three USC prep items (forms, supplies, lists)","Finish a whole USC prep category"] },
+    { t:["Log today's spending","Review the week's budget","Set up your USC semester budget"] },
+    { t:["Do the one errand you keep putting off","Clear your errand list for the week","Deep-clean and organize your space"] },
+  ],
+  craft: [
+    { t:["Practice trombone for 10 minutes — phone stays down","Practice trombone for 25 minutes","A full 45-minute trombone session"], habit:1 },
+    { t:["Fold one origami piece","Fold a design you haven't tried","Fold a hard design start to finish"], habit:1 },
+    { t:["Prep one thing for the next Cosmere session","Write a page of session notes or ideas","Build something substantial for the campaign"] },
+    { t:["Create anything for 15 minutes","Put 30 focused minutes into a creative project","A 60-minute deep creative session"] },
+  ],
+  social: [
+    { t:["Send Lizzie a message that isn't just \"hey\"","Plan a proper date with Lizzie","Plan something special for Lizzie"], habit:1 },
+    { t:["Check in with Mom","Do something with Mom this week","Plan a full day with Mom before school starts"] },
+    { t:["Message Ellie, Skyler, or Madelyn","Set up a hangout with the orientation crew","Organize a group hangout before the semester"] },
+    { t:["Text the Browns to see how Pennsylvania is treating them","Call Lindsay","Write someone a real letter or long message"] },
+    { t:["Ask a coworker how they're really doing","Hang out with a friend this week","Host or organize a get-together"] },
+  ],
+}};
+
+/* learning stats: per-template accepts/rerolls/completions, per-slot offer history */
+function LT(key){ return state.learn.tpl[key] || (state.learn.tpl[key] = { a:0, r:0, c:0 }); }
+function LS(i){ return state.learn.slot[i] || (state.learn.slot[i] = { o:0, a:0, r:0 }); }
+
+function activeLib(attr){
+  const packLib = (state.pack && state.pack.lib) || DEFAULT_PACK.lib;
+  const out = [];
+  (packLib[attr] || []).forEach((tpl, i) => out.push({ tpl, key:"p:" + attr + ":" + i, pack:true }));
+  (QLIB[attr] || []).forEach((tpl, i) => out.push({ tpl, key:"g:" + attr + ":" + i, pack:false }));
+  return out;
+}
+function tplWeight(e){
+  const st = state.learn.tpl[e.key];
+  let w = e.pack ? 1.5 : 1;
+  if(st) w = w + 0.6*(st.a||0) + 0.9*(st.c||0) - 0.45*(st.r||0);
+  return Math.min(5, Math.max(0.15, w));
+}
+/* -1 on historically weak days of the week, +1 on strong ones */
+function dayStrength(){
+  const counts = [0,0,0,0,0,0,0];
+  let total = 0;
+  for(const h of state.history){ counts[new Date(h.ts).getDay()]++; total++; }
+  if(total < 12) return 0;
+  const avg = total / 7, c = counts[new Date().getDay()];
+  return c < avg * 0.6 ? -1 : c > avg * 1.4 ? 1 : 0;
+}
+
+function hashStr(s){
+  let h = 2166136261;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function daysSince(dk){
+  const [y, m, d] = dk.split("-").map(Number);
+  return Math.max(0, Math.round((new Date() - new Date(y, m-1, d)) / 86400000));
+}
+
+function analyzeState(){
+  const keys = Object.keys(ATTRS);
+  const lastEarn = {};
+  for(const h of state.history){ if(!(h.attr in lastEarn)) lastEarn[h.attr] = h.day; }
+  const maxXp = Math.max(...keys.map(k => state.attrs[k]));
+  let neglected = keys[0], nScore = -1, best = keys[0], bXp = -1;
+  for(const k of keys){
+    const idleDays = lastEarn[k] ? Math.min(14, daysSince(lastEarn[k])) : 14;
+    const score = (maxXp - state.attrs[k]) / 60 + idleDays;
+    if(score > nScore){ nScore = score; neglected = k; }
+    if(state.attrs[k] > bXp){ bXp = state.attrs[k]; best = k; }
+  }
+  const broken = state.quests.find(q =>
+    q.type === "daily" && (q.streak || 0) >= 2 &&
+    q.lastDone && q.lastDone !== todayKey() && q.lastDone !== yesterdayKey() &&
+    daysSince(q.lastDone) <= 5);
+  return { neglected, best, broken };
+}
+
+function tierFor(attr){
+  const l = levelInfo(state.attrs[attr], attrNeed).level;
+  return l <= 3 ? 0 : l <= 7 ? 1 : 2;
+}
+function offerXp(tier, mult, r){
+  const base = [15, 30, 50][tier];
+  return Math.max(10, Math.round((base * mult + (r() * 14 - 7)) / 5) * 5);
+}
+function pickTemplate(r, attr, tier, taken, habitOnly){
+  const names = new Set([...state.quests.map(q => q.name), ...taken]);
+  let pool = activeLib(attr).filter(e => (!habitOnly || e.tpl.habit) && !e.tpl.t.some(v => names.has(v)));
+  if(!pool.length) pool = activeLib(attr).filter(e => !habitOnly || e.tpl.habit);
+  if(!pool.length) pool = activeLib(attr);
+  const total = pool.reduce((s, e) => s + tplWeight(e), 0);
+  let x = r() * total;
+  let e = pool[pool.length - 1];
+  for(const cand of pool){ x -= tplWeight(cand); if(x <= 0){ e = cand; break; } }
+  const t = Math.min(tier, e.tpl.t.length - 1);
+  return { name: e.tpl.t[t], key: e.key };
+}
+
+function genOffer(slot, bump, taken){
+  const r = mulberry32(hashStr(todayKey() + "#" + slot + "#" + bump));
+  const a = analyzeState();
+  const ds = dayStrength();
+  const lighten = (dayCtx && dayCtx.busy ? 1 : 0) + (ds < 0 ? 1 : 0);
+  const busyNote = o => { if(dayCtx && dayCtx.busy) o.reason += " · kept light for a busy day"; return o; };
+  const mk = (attr, type, tier, mult, reason) => {
+    const p = pickTemplate(r, attr, tier, taken, type === "daily");
+    return { attr, type, tier, accepted:false, bump, key:p.key, name:p.name, xp:offerXp(tier, mult, r), reason };
+  };
+  const anyKey = () => Object.keys(ATTRS)[(r() * 5) | 0];   // fresh save: every attr is tied
+  if(slot === 0){
+    const attr = state.xp === 0 ? anyKey() : a.neglected;
+    const tier = Math.max(0, tierFor(attr) - lighten);
+    const reason = state.xp === 0 ? "A place to start" : ATTRS[attr].name + " is falling behind · bonus XP";
+    return busyNote(mk(attr, "oneoff", tier, 1.25, reason));
+  }
+  if(slot === 1){
+    if(a.broken){
+      const attr = a.broken.attr, tier = Math.max(0, tierFor(attr) - lighten);
+      return busyNote(mk(attr, "oneoff", tier, 1.25, "Win back your " + ATTRS[attr].name + " momentum"));
+    }
+    if(dayCtx && dayCtx.fitness){
+      const tier = Math.max(0, tierFor("body") - lighten);
+      return mk("body", "oneoff", tier, 1.15, "Training is on your calendar — stack a Body win");
+    }
+    const keys = Object.keys(ATTRS);
+    const attr = keys[(r() * keys.length) | 0];
+    const tier = Math.max(0, tierFor(attr) - lighten);
+    return busyNote(mk(attr, "daily", tier, 1, "A new habit to forge"));
+  }
+  const attr = state.xp === 0 ? anyKey() : a.best;
+  const s2 = state.learn.slot[2];
+  const shy = s2 && s2.o >= 6 && (s2.a || 0) / s2.o < 0.25 ? 1 : 0;   // challenges keep getting ignored -> ease off
+  const tier = Math.max(0, Math.min(2, tierFor(attr) + 1 - lighten - shy));
+  let reason = "A challenge for your strongest";
+  if(ds > 0) reason = "Your strong day — a worthy challenge";
+  if(ds < 0) reason = "A lighter trial for a quiet day";
+  return busyNote(mk(attr, "oneoff", tier, ds > 0 ? 1.6 : 1.5, reason));
+}
+
+function ctxSig(){
+  return todayKey() + (dayCtx ? "|b" + (dayCtx.busy ? 1 : 0) + "|f" + (dayCtx.fitness ? 1 : 0) : "|none");
+}
+function genSlots(prev){
+  const taken = [];
+  return Array.from({ length: boardSlots() }, (_, i) => i).map(i => {
+    const o = genOffer(i, prev ? (prev[i].bump || 0) : 0, taken);
+    taken.push(o.name);
+    return o;
+  });
+}
+function ensureBoard(){
+  if(state.board && state.board.day === todayKey()) return;
+  state.board = { day: todayKey(), sig: ctxSig(), slots: genSlots(null) };
+  state.board.slots.forEach((_, i) => LS(i).o++);
+  save();
+}
+/* calendar context arrived (or changed): regenerate an untouched board to fit the day */
+function maybeAdaptBoard(){
+  if(!state.board || state.board.day !== todayKey() || state.board.sig === ctxSig()) return;
+  if(!state.board.slots.some(o => o.accepted)) state.board.slots = genSlots(state.board.slots);
+  state.board.sig = ctxSig();
+  save();
+}
+function rerollOffer(i){
+  const slots = state.board.slots;
+  if(slots[i].accepted) return;
+  LS(i).r++; LT(slots[i].key).r++;
+  const taken = slots.filter((_, j) => j !== i).map(o => o.name);
+  slots[i] = genOffer(i, (slots[i].bump || 0) + 1, taken);
+  save(); render();
+}
+function acceptOffer(i){
+  const o = state.board.slots[i];
+  if(o.accepted) return;
+  LS(i).a++; LT(o.key).a++;
+  state.quests.push(mkQuest(o.name, o.attr, o.xp, o.type, o.key));
+  o.accepted = true;
+  save(); render();
+  showToast("Accepted", (o.type === "daily" ? "New daily quest — " : "Quest added — ") + o.name, o.attr, null);
+  announceBadges(checkAchievements(), 1500);
+}
+
+/* ===== perk tree =====
+   Points: 1 per character level gained, 1 per boss vanquished. Spent totals are
+   derived from the owned set, so the pool is always self-consistent. */
+const PERKS = [
+  { id:"ironhabit", attr:"body",   tier:1, cost:1, req:2, ic:"shield", name:"Iron Habit",
+    desc:"+10% XP from Body quests" },
+  { id:"secondwind", attr:"body",  tier:2, cost:2, req:4, ic:"flame",  name:"Second Wind",
+    desc:"Forgives one missed day a week — daily streaks survive it" },
+  { id:"berserker", attr:"body",   tier:3, cost:3, req:6, ic:"sword",  name:"Berserker",
+    desc:"Land up to 2 boss strikes a day instead of 1" },
+
+  { id:"quickstudy", attr:"mind",  tier:1, cost:1, req:2, ic:"book",   name:"Quick Study",
+    desc:"+10% XP from Mind quests" },
+  { id:"deepfocus", attr:"mind",   tier:2, cost:2, req:4, ic:"hourglass", name:"Scholar's Focus",
+    desc:"+25% XP on quests finished by timer" },
+  { id:"foresight", attr:"mind",   tier:3, cost:3, req:6, ic:"star",   name:"Foresight",
+    desc:"The quest board offers a fourth quest each day" },
+
+  { id:"coinpurse", attr:"grind",  tier:1, cost:1, req:2, ic:"coin",   name:"Coin Purse",
+    desc:"+15% gold from every quest" },
+  { id:"haggler",   attr:"grind",  tier:2, cost:2, req:4, ic:"coin",   name:"Haggler",
+    desc:"Rewards cost 15% less gold" },
+  { id:"dividend",  attr:"grind",  tier:3, cost:3, req:6, ic:"gem",    name:"Daily Dividend",
+    desc:"Your first quest each day pays double gold" },
+
+  { id:"steadyhand", attr:"craft", tier:1, cost:1, req:2, ic:"gem",    name:"Steady Hands",
+    desc:"+10% XP from Craft quests" },
+  { id:"artisan",   attr:"craft",  tier:2, cost:2, req:4, ic:"star",   name:"Artisan",
+    desc:"Skills gain 25% more XP" },
+  { id:"masterwork", attr:"craft", tier:3, cost:3, req:6, ic:"crown",  name:"Masterwork",
+    desc:"Boss victory rewards +50%" },
+
+  { id:"warmwords", attr:"social", tier:1, cost:1, req:2, ic:"sun",    name:"Warm Words",
+    desc:"+10% XP from Social quests" },
+  { id:"networker", attr:"social", tier:2, cost:2, req:4, ic:"shield", name:"Networker",
+    desc:"+20% XP on quests taken from the quest board" },
+  { id:"renowned",  attr:"social", tier:3, cost:3, req:6, ic:"crown",  name:"Renowned",
+    desc:"+5% XP on absolutely everything" },
+];
+function hasPerk(id){ return !!(state.perks && state.perks[id]); }
+function perkPointsEarned(){ return Math.max(0, charLevel() - 1) + (state.stats.bosses || 0); }
+function perkPointsSpent(){
+  return PERKS.reduce((t, p) => t + (hasPerk(p.id) ? p.cost : 0), 0);
+}
+function perkPoints(){ return perkPointsEarned() - perkPointsSpent(); }
+function perkLocked(p){   // prerequisite: the branch's attribute level, and the tier below it
+  const lvl = levelInfo(state.attrs[p.attr], attrNeed).level;
+  if(lvl < p.req) return "Needs " + ATTRS[p.attr].name + " Lv " + p.req;
+  const below = PERKS.find(x => x.attr === p.attr && x.tier === p.tier - 1);
+  if(below && !hasPerk(below.id)) return "Unlock " + below.name + " first";
+  if(perkPoints() < p.cost) return "Needs " + p.cost + " perk point" + (p.cost > 1 ? "s" : "");
+  return null;
+}
+function unlockPerk(id){
+  const p = PERKS.find(x => x.id === id);
+  if(!p || hasPerk(id) || perkLocked(p)) return false;
+  state.perks[id] = Date.now();
+  save(); render();
+  showToast("Perk unlocked", p.name + " · " + p.desc, null, null);
+  sparkBurst(window.innerWidth / 2, window.innerHeight * 0.3, "#D9A94E");
+  announceBadges(checkAchievements(), 4600);
+  return true;
+}
+/* ---- effect helpers, read by the systems they modify ---- */
+function xpMultFor(q, viaTimer){
+  let m = 1;
+  if(hasPerk("ironhabit")  && q.attr === "body")   m += 0.10;
+  if(hasPerk("quickstudy") && q.attr === "mind")   m += 0.10;
+  if(hasPerk("steadyhand") && q.attr === "craft")  m += 0.10;
+  if(hasPerk("warmwords")  && q.attr === "social") m += 0.10;
+  if(hasPerk("renowned"))                          m += 0.05;
+  if(hasPerk("deepfocus") && viaTimer)             m += 0.25;
+  if(hasPerk("networker") && q.src)                m += 0.20;
+  return m;
+}
+function goldMult(){ return hasPerk("coinpurse") ? 1.15 : 1; }
+function skillMult(){ return hasPerk("artisan") ? 1.25 : 1; }
+function rewardCost(rw){ return hasPerk("haggler") ? Math.max(5, Math.round(rw.cost * 0.85)) : rw.cost; }
+function strikesPerDay(){ return hasPerk("berserker") ? 2 : 1; }
+function boardSlots(){ return hasPerk("foresight") ? 4 : 3; }
+function shieldReady(){
+  if(!hasPerk("secondwind")) return false;
+  return !state.shield || state.shield.week !== thisWeek();
+}
+
+/* ===== achievements ===== */
+const BADGE_ICONS = {
+  sword:'<path d="M12 3v11M9 14h6M12 14v6M10 20h4"/>',
+  flame:'<path d="M12 3c1.5 3 5 5 5 9a5 5 0 1 1-10 0c0-2.5 1.5-4 2.5-6 .5 1.5 1 2.5 1.5 3.5C11.5 7 12 5 12 3z"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>',
+  crown:'<path d="M4 18h16M4 18l-1-9 5 3 4-6 4 6 5-3-1 9"/>',
+  star:'<path d="M12 3l2.5 6 6.5.5-5 4 1.5 6.5L12 16.5 6.5 20 8 13.5l-5-4 6.5-.5L12 3z"/>',
+  coin:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>',
+  hourglass:'<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
+  book:'<path d="M5 4a2 2 0 0 1 2-2h12v18H7a2 2 0 0 0-2 2V4z"/><path d="M19 16H7a2 2 0 0 0-2 2"/>',
+  gem:'<path d="M7 4h10l4 5-9 11L3 9l4-5z"/><path d="M3 9h18"/>',
+};
+function charLevel(){ return levelInfo(state.xp, charNeed).level; }
+function attrLevels(){ return Object.keys(ATTRS).map(k => levelInfo(state.attrs[k], attrNeed).level); }
+function anyStreak(n){ return state.quests.some(q => effStreak(q) >= n); }
+function perfectDay(s){
+  const dailies = s.quests.filter(q => q.type === "daily");
+  return dailies.length >= 2 && dailies.every(q => completedNow(q));
+}
+const BADGES = [
+  { id:"first",   ic:"sword",     name:"First Blood",          desc:"Complete your first quest",             check:s => s.stats.done >= 1 },
+  { id:"d25",     ic:"sword",     name:"Adventurer",           desc:"Complete 25 quests",                    check:s => s.stats.done >= 25 },
+  { id:"d100",    ic:"crown",     name:"Centurion",            desc:"Complete 100 quests",                   check:s => s.stats.done >= 100 },
+  { id:"s3",      ic:"flame",     name:"Kindling",             desc:"Reach a 3-day streak",                  check:() => anyStreak(3) },
+  { id:"s7",      ic:"flame",     name:"Week of Fire",         desc:"Reach a 7-day streak",                  check:() => anyStreak(7) },
+  { id:"s30",     ic:"flame",     name:"Unbroken",             desc:"Reach a 30-day streak",                 check:() => anyStreak(30) },
+  { id:"l5",      ic:"star",      name:"Adept's Path",         desc:"Reach character level 5",               check:() => charLevel() >= 5 },
+  { id:"l10",     ic:"star",      name:"Double Digits",        desc:"Reach character level 10",              check:() => charLevel() >= 10 },
+  { id:"l20",     ic:"crown",     name:"Veteran of the Realm", desc:"Reach character level 20",              check:() => charLevel() >= 20 },
+  { id:"spec",    ic:"shield",    name:"Specialist",           desc:"Raise any attribute to level 5",        check:() => Math.max(...attrLevels()) >= 5 },
+  { id:"renai",   ic:"book",      name:"Renaissance Soul",     desc:"Raise every attribute to level 3",      check:() => Math.min(...attrLevels()) >= 3 },
+  { id:"master",  ic:"gem",       name:"Master of One",        desc:"Raise any attribute to level 10",       check:() => Math.max(...attrLevels()) >= 10 },
+  { id:"hoard",   ic:"coin",      name:"Dragon's Hoard",       desc:"Hold 500 gold at once",                 check:s => s.gold >= 500 },
+  { id:"treat",   ic:"coin",      name:"Treat Yourself",       desc:"Claim your first reward",               check:s => s.stats.redeems >= 1 },
+  { id:"patron",  ic:"gem",       name:"Patron of Joy",        desc:"Claim 10 rewards",                      check:s => s.stats.redeems >= 10 },
+  { id:"perfect", ic:"sun",       name:"Perfect Day",          desc:"Complete every daily in one day (2+)",  check:perfectDay },
+  { id:"dawn",    ic:"sun",       name:"Dawn Patrol",          desc:"Complete a quest before 7am",           check:s => s.history.some(h => !h.type && new Date(h.ts).getHours() < 7) },
+  { id:"guild",   ic:"shield",    name:"Guild Favorite",       desc:"Accept 10 quest board offers",          check:s => Object.values(s.learn.slot).reduce((t, x) => t + (x.a || 0), 0) >= 10 },
+  { id:"xp1k",    ic:"hourglass", name:"Seasoned",             desc:"Earn 1,000 lifetime XP",                check:s => s.xp >= 1000 },
+  { id:"clock",   ic:"hourglass", name:"Timekeeper",           desc:"Finish 5 quests by timer",              check:s => (s.stats.timer || 0) >= 5 },
+  { id:"slayer",  ic:"sword",     name:"Slayer",               desc:"Vanquish your first boss",              check:s => (s.stats.bosses || 0) >= 1 },
+  { id:"giants",  ic:"crown",     name:"Giant Slayer",         desc:"Vanquish 3 bosses",                     check:s => (s.stats.bosses || 0) >= 3 },
+  { id:"skilled", ic:"gem",       name:"Skilled Hand",         desc:"Take any skill to level 5",             check:s => (s.skills || []).some(k => levelInfo(k.xp, skillNeed).level >= 5) },
+  { id:"poly",    ic:"book",      name:"Polymath",             desc:"Take 5 skills to level 3",              check:s => (s.skills || []).filter(k => levelInfo(k.xp, skillNeed).level >= 3).length >= 5 },
+  { id:"ascend",  ic:"star",      name:"Ascendant",            desc:"Unlock 5 perks",                        check:s => Object.keys(s.perks || {}).length >= 5 },
+  { id:"crusade", ic:"shield",    name:"Crusader",             desc:"Complete a whole campaign",             check:s => (s.campaigns || []).some(c => c.done) },
+];
+function checkAchievements(){
+  const earned = [];
+  for(const b of BADGES){
+    if(!state.badges[b.id] && b.check(state)){
+      state.badges[b.id] = Date.now();
+      earned.push(b);
+    }
+  }
+  return earned;
+}
+function announceBadges(earned, delay){
+  if(!earned.length) return;
+  save(); render();
+  setTimeout(() => {
+    showToast("Deed done!", earned.map(b => b.name).join(" · "), null, null);
+    sparkBurst(window.innerWidth / 2, window.innerHeight * 0.25, "#D9A94E");
+  }, delay);
+}
+
+/* ===== mutations ===== */
+let openAttr = null;
+let justDoneId = null;
+function completeQuest(id, viaTimer){
+  const q = state.quests.find(x => x.id === id);
+  if(!q || completedNow(q)) return null;
+
+  const beforeChar = levelInfo(state.xp, charNeed).level;
+  const beforeAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
+
+  q.prev = { streak:q.streak, lastDone:q.lastDone, lastWeek:q.lastWeek, done:q.done };
+  const tk = todayKey();
+  let shieldUsed = false;
+  if(q.type === "daily"){
+    const back2 = new Date(); back2.setDate(back2.getDate() - 2);
+    if(q.lastDone === yesterdayKey()){
+      q.streak = (q.streak || 0) + 1;
+    }else if(q.lastDone === dayKey(back2) && shieldReady() && (q.streak || 0) >= 1){
+      q.streak = (q.streak || 0) + 1;                  // Second Wind covers the gap
+      state.shield = { week: thisWeek(), quest: q.id };
+      shieldUsed = true;
+    }else{
+      q.streak = 1;
+    }
+    q.lastDone = tk;
+  }else if(q.type === "weekly"){
+    q.lastWeek = thisWeek();
+    q.lastDone = tk;
+  }else{
+    q.done = true;
+    q.lastDone = tk;
+  }
+
+  const gain = Math.max(1, Math.round(q.xp * xpMultFor(q, viaTimer)));
+  const firstToday = !state.history.some(h => !h.type && h.day === tk);
+  const goldGain = Math.max(1, Math.round(gain * goldMult() * (hasPerk("dividend") && firstToday ? 2 : 1)));
+  state.xp += gain;
+  state.gold += goldGain;
+  state.attrs[q.attr] += gain;
+  state.stats.done++;
+  const sk = SK(q.tag);
+  const beforeSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
+  if(sk) sk.xp += Math.max(1, Math.round(gain * skillMult()));
+  const afterSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
+  if(q.src) LT(q.src).c++;
+
+  /* strike bosses this quest's subtype is keyed to — at most once per day each */
+  const struck = [], victories = [];
+  for(const b of state.bosses){
+    if(b.defeated || b.tag !== q.tag) continue;
+    if(b.log.filter(e => e.d === tk).length >= strikesPerDay()) continue;
+    b.log.push({ d: tk, q: q.id });
+    struck.push({ id: b.id, n: b.log.length, need: b.need });
+    if(b.log.length >= b.need){
+      b.defeated = Date.now();
+      state.stats.bosses++;
+      const mw = hasPerk("masterwork") ? 1.5 : 1;
+      const bonusXp = Math.round(b.need * 25 * mw), bonusGold = Math.round(b.need * 50 * mw);
+      state.xp += bonusXp; state.attrs[b.attr] += bonusXp; state.gold += bonusGold;
+      victories.push({ boss: b, bonusXp, bonusGold, camp: b.campaign ? advanceCampaign(b) : null });
+    }
+  }
+
+  const afterChar = levelInfo(state.xp, charNeed).level;
+  const afterAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
+
+  const entry = { ts: Date.now(), day: tk, qid: q.id, name: q.name, attr: q.attr, xp: gain, gold: goldGain };
+  if(afterChar > beforeChar) entry.cu = afterChar;
+  if(afterAttr > beforeAttr) entry.au = afterAttr;
+  state.history.unshift(entry);
+  for(const v of victories){
+    state.history.unshift({ ts: Date.now(), day: tk, type:"boss", name: v.boss.name, attr: v.boss.attr, xp: v.bonusXp, gold: v.bonusGold });
+  }
+  if(state.history.length > 600) state.history.length = 600;
+
+  if(state.timer && state.timer.qid === q.id){ state.timer = null; clearInterval(timerInt); timerInt = null; }
+  justDoneId = q.id;
+  setTimeout(() => { justDoneId = null; }, 700);
+
+  save(); render();
+
+  if(victories.length){
+    bossVictory(victories[0]);
+    if(afterChar > beforeChar) setTimeout(() => showLevelUp(afterChar, null, 0), 3800);
+  }else if(afterChar > beforeChar){
+    showLevelUp(afterChar, afterAttr > beforeAttr ? q.attr : null, afterAttr);
+  }else{
+    let sub = ATTRS[q.attr].name;
+    if(afterSkill > beforeSkill) sub = sk.name + " skill reached Lv " + afterSkill;
+    else if(afterAttr > beforeAttr) sub += " reached Lv " + afterAttr;
+    else if(q.type === "daily" && q.streak >= 2) sub += " · " + q.streak + "-day streak";
+    sub += " · +" + goldGain + " gold";
+    if(shieldUsed) sub = "Second Wind saved your streak · " + q.streak + " days";
+    showToast("+" + gain + " XP", sub, q.attr, id);
+  }
+  announceBadges(checkAchievements(), 1700);
+  for(const st of struck) spawnDamage(st.id, st.n, st.need);   // after every re-render, or the float is wiped
+  return q;
+}
+
+function uncompleteQuest(id){
+  const q = state.quests.find(x => x.id === id);
+  if(!q || !completedNow(q) || !q.prev) return;
+  // only reversible within the same period it was completed in
+  if(q.type === "weekly" ? weekKey(new Date()) !== q.lastWeek : q.lastDone !== todayKey()) return;
+
+  q.streak = q.prev.streak; q.lastDone = q.prev.lastDone;
+  q.lastWeek = q.prev.lastWeek; q.done = q.prev.done; q.prev = null;
+
+  const rec = state.history.find(h => h.qid === id && h.day === todayKey() && !h.type);
+  const undoXp = rec ? rec.xp : q.xp, undoGold = rec ? (rec.gold || rec.xp) : q.xp;
+  state.xp = Math.max(0, state.xp - undoXp);
+  state.gold = Math.max(0, state.gold - undoGold);
+  state.stats.done = Math.max(0, state.stats.done - 1);
+  state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - undoXp);
+  const usk = SK(q.tag);
+  if(usk) usk.xp = Math.max(0, usk.xp - Math.round(undoXp * skillMult()));
+  if(state.shield && state.shield.quest === id && state.shield.week === thisWeek()) state.shield = null;
+  for(const b of state.bosses){   // withdraw today's strike; a defeat already claimed stays won
+    if(b.defeated) continue;
+    const i = b.log.findIndex(e => e.q === q.id && e.d === todayKey());
+    if(i >= 0) b.log.splice(i, 1);
+  }
+  if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
+
+  const i = state.history.findIndex(h => h.qid === id && h.day === todayKey());
+  if(i >= 0) state.history.splice(i, 1);
+
+  hideToast(); save(); render();
+  showToast("−" + q.xp + " XP", "Completion undone", q.attr, null);
+}
+
+function upsertQuest(data){
+  if(editingId){
+    const q = state.quests.find(x => x.id === editingId);
+    if(q){ q.name = data.name; q.attr = data.attr; q.xp = data.xp; q.type = data.type; q.tag = data.tag; }
+  }else{
+    state.quests.push(mkQuest(data.name, data.attr, data.xp, data.type, null, data.tag));
+  }
+  save(); render();
+}
+function deleteQuest(id){
+  state.quests = state.quests.filter(q => q.id !== id);
+  save(); render();
+}
+
+/* ===== rendering ===== */
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function gemHTML(attr){
+  return '<span class="gem" style="background:' + ATTRS[attr].color + '"><b>' + ATTRS[attr].name[0] + '</b></span>';
+}
+
+function charCardHTML(){
+  const ci = levelInfo(state.xp, charNeed);
+  const frac = ci.need ? ci.into / ci.need : 0;
+  const C = 2 * Math.PI * 32;
+  const rows = Object.keys(ATTRS).map(k => {
+    const ai = levelInfo(state.attrs[k], attrNeed);
+    const pct = Math.round((ai.into / ai.need) * 100);
+    const open = openAttr === k;
+    let html = '<button class="attr" data-act="attr-toggle" data-id="' + k + '" aria-expanded="' + open + '">' + gemHTML(k) +
+      '<span class="attr-name">' + ATTRS[k].name + '<small>' + ATTRS[k].desc + '</small></span>' +
+      '<span class="attr-lvl num">Lv ' + ai.level + ' · ' + ai.into + '/' + ai.need + '</span>' +
+      '<span class="bar"><i style="width:' + pct + '%;background:' + ATTRS[k].color + '"></i></span></button>';
+    if(open){
+      const list = skillsFor(k).slice().sort((a, b) => b.xp - a.xp);
+      html += '<div class="skills">' + (list.length ? list.map(s => {
+        const si = levelInfo(s.xp, skillNeed);
+        const sp = Math.round((si.into / si.need) * 100);
+        return '<div class="skill"><span class="skill-name">' + esc(s.name) + '</span>' +
+          '<span class="skill-lvl num">Lv ' + si.level + '</span>' +
+          '<span class="bar"><i style="width:' + sp + '%;background:' + ATTRS[k].color + '"></i></span>' +
+          '<span class="skill-xp num">' + s.xp + ' xp</span></div>';
+      }).join("") : '<div class="skill-empty">No skills in this branch yet.</div>') + '</div>';
+    }
+    return html;
+  }).join("");
+  return '<section class="char">' +
+    '<div class="char-top">' +
+      '<div class="ring-wrap"><svg viewBox="0 0 76 76">' +
+        '<circle class="ring-bg" cx="38" cy="38" r="32" fill="none" stroke-width="5"/>' +
+        '<circle class="ring-fg" cx="38" cy="38" r="32" fill="none" stroke-width="5" stroke-linecap="round" ' +
+          'transform="rotate(-90 38 38)" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C*(1-frac)).toFixed(1) + '"/>' +
+      '</svg><div class="ring-lvl"><b class="serif num">' + ci.level + '</b><span>level</span></div></div>' +
+      '<div class="char-id">' +
+        '<h2 class="char-title serif">' + titleFor(ci.level) + '</h2>' +
+        '<p class="char-sub"><span class="num">' + state.xp.toLocaleString() + '</span> XP · <span class="gold-sub num">' + state.gold.toLocaleString() + ' gold</span></p>' +
+      '</div>' +
+    '</div>' +
+    '<div class="char-xp"><div class="xp-row"><span>Next level</span><span class="num">' + ci.into + ' / ' + ci.need + ' XP</span></div>' +
+    '<div class="bar"><i style="width:' + Math.round(frac*100) + '%"></i></div></div>' +
+    '<div class="attrs">' + rows + '</div>' +
+  '</section>';
+}
+
+function questRowHTML(q){
+  const done = completedNow(q);
+  const st = effStreak(q);
+  const sub = q.tag && SK(q.tag) ? skillName(q.tag) : null;
+  const meta = ['<span class="dot" style="background:' + ATTRS[q.attr].color + '"></span> ' + ATTRS[q.attr].name + (sub ? " · " + sub : ""),
+                TYPE_LABEL[q.type]];
+  if(st >= 2) meta.push('<span class="streak">' + st + '-day streak</span>');
+  const mins = done ? null : parseDuration(q.name);
+  const live = state.timer && state.timer.qid === q.id && state.timer.endsAt > Date.now();
+  const timerChip = mins
+    ? '<span class="q-timer' + (live ? " live" : "") + '" data-act="timer" data-id="' + q.id + '" role="button" aria-label="Start ' + mins + '-minute timer">' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>' +
+      (live ? '<b class="num" id="chip-time">' + fmtRemain(state.timer.endsAt - Date.now()) + '</b>' : mins + 'm') + '</span>'
+    : '';
+  return '<button class="q' + (done ? " done" : "") + '" data-act="' + (done ? "uncomplete" : "complete") + '" data-id="' + q.id + '" style="--qcol:' + ATTRS[q.attr].color + '">' +
+    '<span class="tick' + (done && q.id === justDoneId ? " pop" : "") + '" aria-hidden="true"></span>' +
+    '<span class="q-main"><span class="q-name">' + esc(q.name) + '</span>' +
+    '<span class="q-meta">' + meta.join(" · ") + '</span></span>' +
+    timerChip +
+    '<span class="q-xp num">+' + q.xp + '</span></button>';
+}
+
+function renderToday(){
+  const dailies  = state.quests.filter(q => q.type === "daily");
+  const weeklies = state.quests.filter(q => q.type === "weekly" && !completedNow(q));
+  const oneoffs  = state.quests.filter(q => q.type === "oneoff" && !q.done);
+  const openDailies = dailies.filter(q => !completedNow(q));
+  const doneToday = state.quests.filter(q => q.type !== "oneoff" ? completedNow(q) : (q.done && q.lastDone === todayKey()));
+
+  const due = [...openDailies, ...weeklies, ...oneoffs];
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+
+  let html = '<div class="screen-head"><h1 class="serif">Today</h1><span class="sub">' + dateStr + '</span></div>';
+  if(calInfo.status === "on" && dayCtx){
+    if(dayCtx.items.length){
+      const rows = dayCtx.items.slice(0, 3).map(i =>
+        '<span class="cal-row"><b class="num">' + esc(i.hm) + '</b>' + esc(i.title) + '</span>').join("");
+      const more = dayCtx.items.length > 3 ? '<span>+' + (dayCtx.items.length - 3) + ' more</span>' : '';
+      html += '<div class="cal">' + (dayCtx.busy ? '<span class="cal-busy">Busy day — offers kept light</span>' : '') + rows + more + '</div>';
+    }
+  }else if(calInfo.status === "err"){
+    html += '<div class="cal cal-err">' + esc(calInfo.msg) + '</div>';
+  }
+  html += charCardHTML();
+
+  const liveCamps = state.campaigns.filter(c => !c.done);
+  html += '<div class="sect"><div class="sect-label"><span>Campaigns</span><button class="sect-add" data-act="camp-new">+ Long goal</button></div>';
+  if(!liveCamps.length){
+    html += '<div class="empty">No campaign underway. Name a long goal and it will be split into a dated timeline.</div>';
+  }else{
+    html += liveCamps.map(c => {
+      const pct = Math.round((c.idx / c.phases.length) * 100);
+      return '<div class="camp"><div class="camp-top"><span class="camp-name">' + esc(c.name) + '</span>' +
+        '<button class="icon-btn" data-act="camp-drop" data-id="' + c.id + '" aria-label="Abandon campaign">\u2715</button></div>' +
+        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[SK(c.tag) ? SK(c.tag).attr : "grind"].color + '"></span> ' +
+          skillName(c.tag) + ' · by ' + fmtDue(c.end) + ' · ' + c.perWeek + '/week</span>' +
+        '<div class="bar"><i style="width:' + pct + '%;background:var(--crimson)"></i></div>' +
+        '<ol class="phases">' + c.phases.map((ph, i) => {
+          const st = ph.done ? "done" : i === c.idx ? "now" : "todo";
+          const hits = i === c.idx ? (state.bosses.find(b => b.id === c.bossId) || { log: [] }).log.length : null;
+          return '<li class="phase ' + st + '"><span class="phase-dot"></span>' +
+            '<span class="phase-name">' + ph.name + '</span>' +
+            '<span class="phase-meta num">' + (st === "now" && hits !== null ? hits + '/' + ph.need : ph.need + ' sessions') +
+            ' · ' + fmtDue(ph.due) + '</span></li>';
+        }).join("") + '</ol></div>';
+    }).join("");
+  }
+  html += '</div>';
+
+  const activeBosses = state.bosses.filter(b => !b.defeated);
+  html += '<div class="sect"><div class="sect-label"><span>Boss battles</span><button class="sect-add" data-act="boss-new">+ Challenge</button></div>';
+  if(!activeBosses.length){
+    html += '<div class="empty">No boss stands against you. Challenge one — a big goal with a health bar.</div>';
+  }else{
+    html += activeBosses.map(b => {
+      const hits = b.log.length;
+      const pct = Math.round(((b.need - hits) / b.need) * 100);
+      const hitToday = b.log.some(e => e.d === todayKey());
+      return '<button class="boss" data-act="boss-edit" data-id="' + b.id + '" data-bosscard="' + b.id + '">' +
+        '<span class="boss-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4L4 20M6.5 2.5L4 4l2.5 1.5M17.5 2.5L20 4l-2.5 1.5M4 17l3 3M20 17l-3 3"/></svg></span>' +
+        '<span class="boss-main"><span class="boss-name">' + esc(b.name) + '</span>' +
+        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[b.attr].color + '"></span> ' +
+          skillName(b.tag) + ' quests strike this foe · one hit a day</span>' +
+        '<span class="hpbar"><i style="width:' + pct + '%"></i></span>' +
+        '<span class="hp-text num">' + hits + ' / ' + b.need + ' strikes' +
+          (hitToday ? ' <span class="struck-today">· struck today</span>' : '') + '</span></span></button>';
+    }).join("");
+  }
+  html += '</div>';
+
+  html += '<div class="sect"><div class="sect-label"><span>Due today</span><span>' + due.length + ' open</span></div>';
+  html += due.length ? due.map(questRowHTML).join("")
+        : '<div class="empty">All clear, ' + titleFor(levelInfo(state.xp, charNeed).level) + '. Every quest is done.</div>';
+  html += '</div>';
+
+  const offers = (state.board && state.board.slots) || [];
+  html += '<div class="sect"><div class="sect-label"><span>Quest board</span><span>new offers daily</span></div>';
+  html += offers.map((o, i) => {
+    if(o.accepted){
+      return '<div class="offer accepted"><div class="offer-top"><span class="offer-reason">' + esc(o.reason) + '</span></div>' +
+        '<span class="offer-name">' + esc(o.name) + '</span>' +
+        '<span class="offer-accepted-note">Accepted — find it in your quests</span></div>';
+    }
+    return '<div class="offer"><div class="offer-top"><span class="offer-reason">' + esc(o.reason) + '</span>' +
+      '<button class="icon-btn" data-act="reroll-offer" data-slot="' + i + '" aria-label="Reroll offer">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 5v6h-6"/></svg></button></div>' +
+      '<span class="offer-name">' + esc(o.name) + '</span>' +
+      '<span class="q-meta"><span class="dot" style="background:' + ATTRS[o.attr].color + '"></span> ' + ATTRS[o.attr].name + ' · ' + TYPE_LABEL[o.type] + '</span>' +
+      '<div class="offer-foot"><button class="btn" data-act="accept-offer" data-slot="' + i + '">Accept</button>' +
+      '<span class="offer-xp num">+' + o.xp + ' XP</span></div></div>';
+  }).join("");
+  html += '</div>';
+
+  if(doneToday.length){
+    html += '<div class="sect"><div class="sect-label"><span>Completed</span></div>' + doneToday.map(questRowHTML).join("") + '</div>';
+  }
+  $("#view-today").innerHTML = html;
+}
+
+function renderQuests(){
+  let html = '<div class="screen-head"><h1 class="serif">Quests</h1><button class="btn" data-act="new">+ New quest</button></div>';
+  const packLib = (state.pack && state.pack.lib) || DEFAULT_PACK.lib;
+  const packName = state.pack ? state.pack.name : DEFAULT_PACK.name;
+  const packCount = Object.values(packLib).reduce((s, a) => s + a.length, 0);
+  html += '<div class="mq"><span class="q-main"><span class="q-name">' + esc(packName) + '</span>' +
+    '<span class="q-meta">' + packCount + ' quest templates power the board</span></span>' +
+    '<button class="icon-btn wide" data-act="import-pack">Import</button>' +
+    (state.pack ? '<button class="icon-btn wide danger" data-act="reset-pack">Reset</button>' : '') + '</div>';
+  html += '<div class="sect"><div class="sect-label"><span>Skills</span><button class="sect-add" data-act="skill-new">+ New skill</button></div>';
+  for(const a of Object.keys(ATTRS)){
+    const list = skillsFor(a);
+    html += '<div class="skillrow"><span class="gem" style="background:' + ATTRS[a].color + '"><b>' + ATTRS[a].name[0] + '</b></span>' +
+      '<span class="skillrow-list">' + (list.length ? '' : '<span class="skill-empty">No skills yet</span>') + list.map(s =>
+        '<button class="chip" data-act="skill-edit" data-id="' + s.id + '" style="--chipcol:' + ATTRS[a].color + '">' +
+        esc(s.name) + ' <b class="num">' + levelInfo(s.xp, skillNeed).level + '</b></button>').join("") + '</span>' +
+      '<button class="skillrow-add" data-act="skill-add" data-id="' + a + '" aria-label="Add a ' + ATTRS[a].name + ' skill">+</button></div>';
+  }
+  html += '</div>';
+
+  for(const type of ["daily","weekly","oneoff"]){
+    const list = state.quests.filter(q => q.type === type);
+    if(!list.length) continue;
+    html += '<div class="sect"><div class="sect-label"><span>' + TYPE_LABEL[type] + (type === "oneoff" ? "" : " quests") + '</span></div>';
+    html += list.map(q => {
+      const st = effStreak(q);
+      const bits = ['<span class="dot" style="background:' + ATTRS[q.attr].color + '"></span> ' + ATTRS[q.attr].name, "+" + q.xp + " XP"];
+      if(st >= 2) bits.push('<span class="streak">' + st + '-day streak</span>');
+      if(q.type === "oneoff" && q.done) bits.push("completed");
+      return '<div class="mq"><span class="q-main"><span class="q-name">' + esc(q.name) + '</span>' +
+        '<span class="q-meta">' + bits.join(" · ") + '</span></span>' +
+        '<button class="icon-btn" data-act="edit" data-id="' + q.id + '" aria-label="Edit quest">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>' +
+        '<button class="icon-btn danger" data-act="del" data-id="' + q.id + '" aria-label="Delete quest">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg></button>' +
+      '</div>';
+    }).join("");
+    html += '</div>';
+  }
+  if(!state.quests.length) html += '<div class="empty">No quests yet. Forge your first one.</div>';
+  $("#view-quests").innerHTML = html;
+}
+
+function renderHistory(){
+  let html = '<div class="screen-head"><h1 class="serif">History</h1><span class="sub num">' + state.history.length + ' entries</span></div>';
+  const earnedCount = BADGES.filter(b => state.badges[b.id]).length;
+  html += '<div class="sect"><div class="sect-label"><span>Deeds</span><span class="num">' + earnedCount + ' / ' + BADGES.length + '</span></div><div class="badges">' +
+    BADGES.map(b =>
+      '<button class="badge' + (state.badges[b.id] ? '' : ' locked') + '" data-act="badge" data-id="' + b.id + '">' +
+      '<span class="badge-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + BADGE_ICONS[b.ic] + '</svg></span>' +
+      '<span class="badge-name">' + b.name + '</span></button>'
+    ).join("") + '</div></div>';
+  if(!state.history.length){
+    html += '<div class="empty">Nothing logged yet. Complete a quest and it lands here.</div>';
+  }else{
+    let lastDay = null;
+    const parts = [];
+    for(const h of state.history){
+      if(h.day !== lastDay){
+        lastDay = h.day;
+        const d = new Date(h.ts);
+        const label = h.day === todayKey() ? "Today" : d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+        parts.push('<div class="day-label">' + label + '</div>');
+      }
+      const t = new Date(h.ts).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+      if(h.type === "boss"){
+        parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
+          '<span class="h-main">' + esc(h.name) + '<small>Boss vanquished</small></span>' +
+          '<span class="h-xp num" style="color:var(--crimson)">+' + h.xp + ' XP · +' + h.gold + 'g</span></div>');
+        continue;
+      }
+      if(h.type === "redeem"){
+        parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
+          '<span class="h-main">' + esc(h.name) + '<small>Reward claimed</small></span>' +
+          '<span class="h-xp num gold-sub">−' + h.cost + '</span></div>');
+        continue;
+      }
+      let badges = "";
+      if(h.cu) badges += '<span class="lu-badge">Lv ' + h.cu + '</span>';
+      if(h.au) badges += '<span class="lu-badge">' + ATTRS[h.attr].name + ' ' + h.au + '</span>';
+      parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
+        '<span class="h-main">' + esc(h.name) + badges + '<small>' + ATTRS[h.attr].name + '</small></span>' +
+        '<span class="h-xp num" style="color:' + ATTRS[h.attr].color + '">+' + h.xp + '</span></div>');
+    }
+    html += '<div class="sect">' + parts.join("") + '</div>';
+  }
+  $("#view-history").innerHTML = html;
+}
+
+/* The tree is drawn in a 400x1010 viewBox: a tapered trunk with five limbs
+   curving off alternate sides, three perk nodes riding each limb. */
+const TREE_W = 400, TREE_H = 1095;
+function qbez(t, a, c, e){
+  const u = 1 - t;
+  return { x: u*u*a.x + 2*u*t*c.x + t*t*e.x, y: u*u*a.y + 2*u*t*c.y + t*t*e.y };
+}
+const NODE_T = [0.40, 0.72, 1.0];
+function limbGeom(i){
+  const side = i % 2 === 0 ? -1 : 1;
+  const yA = 985 - i * 172;
+  const a = { x: 200, y: yA };
+  const c = { x: 200 + side * 78, y: yA - 24 };
+  const e = { x: 200 + side * 118, y: yA - 176 };
+  return { side, a, c, e, nodes: NODE_T.map(t => qbez(t, a, c, e)) };
+}
+function wrapLabel(name){
+  if(name.length <= 11) return [name];
+  const parts = name.split(" ");
+  if(parts.length === 1) return [name];
+  const mid = Math.ceil(parts.length / 2);
+  return [parts.slice(0, mid).join(" "), parts.slice(mid).join(" ")];
+}
+function renderPerks(){
+  const pts = perkPoints(), owned = PERKS.filter(p => hasPerk(p.id)).length;
+  let html = '<div class="screen-head"><h1 class="serif">Perks</h1><span class="sub num">' + owned + ' / ' + PERKS.length + '</span></div>';
+  html += '<div class="wallet"><span class="coin-gem"></span><div>' +
+    '<div class="wallet-n serif num">' + pts + '</div>' +
+    '<small>perk point' + (pts === 1 ? "" : "s") + ' to spend — one per character level, one per boss felled</small></div></div>';
+
+  const order = ["body", "mind", "grind", "craft", "social"];
+  let limbs = "", nodes = "", labels = "";
+
+  order.forEach((a, i) => {
+    const g = limbGeom(i);
+    const col = ATTRS[a].color;
+    const branch = PERKS.filter(p => p.attr === a).sort((x, y) => x.tier - y.tier);
+    const d = "M" + g.a.x + " " + g.a.y + " Q" + g.c.x + " " + g.c.y + " " + g.e.x + " " + g.e.y;
+    const topOwned = branch.reduce((t, p, idx) => hasPerk(p.id) ? NODE_T[idx] : t, 0);
+
+    limbs += '<path d="' + d + '" class="limb-bg"/>';
+    if(topOwned > 0) limbs += '<path d="' + d + '" class="limb-live" style="stroke:' + col + '" pathLength="1" stroke-dasharray="' + topOwned.toFixed(3) + ' 1"/>';
+
+    // branch nameplate, tucked against the trunk on the opposite side
+    labels += '<text x="' + (200 - g.side * 16) + '" y="' + (g.a.y + 5) + '" class="limb-label" ' +
+      'text-anchor="' + (g.side === 1 ? "end" : "start") + '" style="fill:' + col + '">' +
+      ATTRS[a].name.toUpperCase() + '</text>';
+
+    branch.forEach((p, idx) => {
+      const n = g.nodes[idx];
+      const got = hasPerk(p.id);
+      const why = got ? null : perkLocked(p);
+      const cls = got ? "pnode got" : (why ? "pnode locked" : "pnode ready");
+      const lines = wrapLabel(p.name);
+      // tier 1 hangs its label below; higher tiers set it above, clear of the node beneath
+      const above = idx > 0;
+      const ly = above ? n.y - 36 - (lines.length - 1) * 13 : n.y + 44;
+      const lx = above ? n.x - g.side * (lines.length > 1 ? 32 : 20) : n.x;   // lean inward, away from the node further out
+      nodes += '<g class="' + cls + '" data-act="perk" data-id="' + p.id + '" style="--pcol:' + col + '" role="button" tabindex="0">' +
+        (got ? '<circle cx="' + n.x + '" cy="' + n.y + '" r="30" class="pnode-glow" style="fill:' + col + '"/>' : '') +
+        '<circle cx="' + n.x + '" cy="' + n.y + '" r="23" class="pnode-disc"/>' +
+        '<circle cx="' + n.x + '" cy="' + n.y + '" r="23" class="pnode-ring" style="stroke:' + (got ? col : "") + '"/>' +
+        '<g transform="translate(' + (n.x - 11) + ' ' + (n.y - 11) + ') scale(0.92)" class="pnode-ic">' +
+          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">' + BADGE_ICONS[p.ic] + '</svg></g>' +
+        (got ? '' : '<circle cx="' + (n.x + 20) + '" cy="' + (n.y - 19) + '" r="9" class="pnode-cost-bg"/>' +
+          '<text x="' + (n.x + 20) + '" y="' + (n.y - 15.5) + '" class="pnode-cost">' + p.cost + '</text>') +
+        lines.map((ln, li) =>
+          '<text x="' + lx + '" y="' + (ly + li * 13) + '" class="pnode-label" text-anchor="middle">' + esc(ln) + '</text>').join("") +
+      '</g>';
+    });
+  });
+
+  html += '<div class="treewrap"><svg viewBox="0 0 ' + TREE_W + ' ' + TREE_H + '" class="tree" role="img" aria-label="Perk tree">' +
+    '<path d="M146 1082 Q176 1052 196 1024 M254 1082 Q224 1052 204 1024" class="roots"/>' +
+    '<path d="M183 1085 L192 620 Q196 380 199 82 L201 82 Q204 380 208 620 L217 1085 Z" class="trunk"/>' +
+    limbs +
+    '<g class="canopy"><circle cx="200" cy="50" r="30"/><circle cx="171" cy="73" r="22"/><circle cx="229" cy="71" r="23"/><circle cx="200" cy="86" r="19"/></g>' +
+    labels + nodes +
+  '</svg></div>';
+
+  $("#view-perks").innerHTML = html;
+}
+
+/* ---- perk detail sheet ---- */
+function openPerkModal(id){
+  const p = PERKS.find(x => x.id === id);
+  if(!p) return;
+  const got = hasPerk(id), why = got ? null : perkLocked(p);
+  $("#p-title").textContent = p.name;
+  $("#p-branch").textContent = ATTRS[p.attr].name + " · tier " + p.tier;
+  $("#p-branch").style.color = ATTRS[p.attr].color;
+  $("#p-desc").textContent = p.desc;
+  const st = $("#p-status");
+  st.className = "perk-status " + (got ? "got" : why ? "locked" : "ready");
+  st.textContent = got ? "Unlocked — active now" : (why || "Ready to unlock");
+  const btn = $("#p-unlock");
+  btn.style.display = got || why ? "none" : "";
+  btn.textContent = "Unlock · " + p.cost + " pt" + (p.cost > 1 ? "s" : "");
+  btn.dataset.id = id;
+  $("#p-close").textContent = got || why ? "Close" : "Not yet";
+  $("#perkmodal").classList.add("on");
+}
+function closePerkModal(){ $("#perkmodal").classList.remove("on"); }
+
+function renderRewards(){
+  let html = '<div class="screen-head"><h1 class="serif">Rewards</h1><button class="btn" data-act="new-reward">+ New reward</button></div>';
+  html += '<div class="wallet"><span class="coin-gem"></span><div>' +
+    '<div class="wallet-n serif num">' + state.gold.toLocaleString() + '</div>' +
+    '<small>gold in the coffers — every XP earned mints one coin</small></div></div>';
+  html += '<div class="sect"><div class="sect-label"><span>Treasury</span><span>' + state.rewards.length + ' rewards</span></div>';
+  if(!state.rewards.length){
+    html += '<div class="empty">The treasury is bare. Add a reward worth questing for.</div>';
+  }else{
+    html += state.rewards.slice().sort((a, b) => a.cost - b.cost).map(rw => {
+      const can = state.gold >= rw.cost;
+      return '<div class="mq"><span class="q-main"><span class="q-name">' + esc(rw.name) + '</span>' +
+        '<span class="q-meta"><span class="rw-cost num">' + rw.cost + ' gold</span>' +
+        (can ? '' : '<span>· ' + (rw.cost - state.gold) + ' more to go</span>') + '</span></span>' +
+        '<button class="btn small' + (can ? '' : ' off') + '" data-act="redeem" data-id="' + rw.id + '">Claim</button>' +
+        '<button class="icon-btn" data-act="edit-reward" data-id="' + rw.id + '" aria-label="Edit reward">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>' +
+        '<button class="icon-btn danger" data-act="del-reward" data-id="' + rw.id + '" aria-label="Delete reward">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg></button>' +
+      '</div>';
+    }).join("");
+  }
+  html += '</div>';
+  $("#view-rewards").innerHTML = html;
+}
+
+function render(){
+  ensureBoard();
+  renderToday(); renderQuests(); renderPerks(); renderRewards(); renderHistory();
+  renderTimerBar();
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
+  $("#view-" + currentTab).classList.add("on");
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === currentTab));
+}
+
+/* ===== calendar (artifact mcp capability; degrades to nothing) ===== */
+function isoLocal(d){
+  const off = -d.getTimezoneOffset();
+  const sgn = off >= 0 ? "+" : "-";
+  const p = n => String(Math.abs(n)).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) +
+         "T" + p(d.getHours()) + ":" + p(d.getMinutes()) + ":00" +
+         sgn + p(Math.floor(Math.abs(off) / 60)) + ":" + p(Math.abs(off) % 60);
+}
+function initCalendar(){
+  if(!window.claude || window.claude.mcp === undefined) return;
+  const s0 = new Date(); s0.setHours(0, 0, 0, 0);
+  const e0 = new Date(s0); e0.setDate(e0.getDate() + 1);
+  calInfo = { status:"loading", msg:"" };
+  try{
+    window.claude.mcp.watchTool("Google Calendar", "list_events",
+      { startTime: isoLocal(s0), endTime: isoLocal(e0), orderBy: "startTime", pageSize: 25 },
+      onCalEvent,
+      { cache: { staleTime: 60000 }, refetchInterval: 900000 });
+  }catch(e){ calInfo = { status:"off", msg:"" }; }
+}
+function onCalEvent(ev){
+  if(ev.type === "data"){
+    const p = ev.result && ev.result.payload;
+    const evs = (p && Array.isArray(p.events) ? p.events : []).filter(e =>
+      e && e.status !== "cancelled" && e.start && e.start.dateTime);
+    const items = evs.map(e => {
+      const st = new Date(e.start.dateTime);
+      const en = e.end && e.end.dateTime ? new Date(e.end.dateTime) : null;
+      return { title: e.summary || "(untitled)",
+               hm: st.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" }),
+               h: en ? Math.max(0, (en - st) / 3600000) : 0 };
+    });
+    const busyH = items.reduce((s, i) => s + i.h, 0);
+    dayCtx = { items, busyH,
+               busy: busyH >= 4 || items.length >= 4,
+               fitness: items.some(i => /gym|work ?out|\brun\b|lift|yoga|swim|hike|climb|training/i.test(i.title)) };
+    calInfo = { status:"on", msg:"" };
+    maybeAdaptBoard();
+    render();
+    return;
+  }
+  const c = ev.error && ev.error.code;
+  if(c === "needs_reauth"){
+    dayCtx = null;
+    calInfo = { status:"err", msg:"Reconnect Google Calendar in claude.ai Settings → Connectors to see your day here." };
+  }else if(c === "server_not_connected" || c === "selection_required"){
+    dayCtx = null;
+    calInfo = { status:"err", msg:"Add Google Calendar in claude.ai Settings → Connectors to see your day here." };
+  }else if(c === "blocked_by_policy" || c === "approval_required" || c === "not_granted" ||
+           c === "capability_disabled" || c === "capability_removed" || c === "not_in_manifest"){
+    dayCtx = null;
+    calInfo = { status:"off", msg:"" };
+  }else{
+    // transient (server_unavailable, upstream_error, ...): keep last-good data
+    if(calInfo.status === "loading") calInfo = { status:"off", msg:"" };
+    return;
+  }
+  render();
+}
+
+/* ===== quest pack import ===== */
+function openPackModal(){
+  $("#pack-text").value = "";
+  $("#pack-err").textContent = "";
+  $("#packmodal").classList.add("on");
+}
+function closePackModal(){ $("#packmodal").classList.remove("on"); }
+function importPack(txt){
+  let p;
+  try{ p = JSON.parse(txt); }catch(e){ return "That isn't valid JSON."; }
+  if(!p || typeof p !== "object" || !p.lib || typeof p.lib !== "object")
+    return 'Expected {"name": "...", "lib": {...}}.';
+  const lib = {};
+  let n = 0;
+  for(const k of Object.keys(ATTRS)){
+    if(!Array.isArray(p.lib[k])) continue;
+    const clean = [];
+    for(const tp of p.lib[k]){
+      if(tp && Array.isArray(tp.t) && tp.t.length && tp.t.every(s => typeof s === "string" && s.trim())){
+        const t = tp.t.slice(0, 3).map(s => s.trim().slice(0, 80));
+        while(t.length < 3) t.push(t[t.length - 1]);
+        clean.push(tp.habit ? { t, habit:1 } : { t });
+        n++;
+      }
+    }
+    if(clean.length) lib[k] = clean;
+  }
+  if(!n) return "No usable templates found — each needs a \"t\" array of 1-3 strings.";
+  state.pack = { name: typeof p.name === "string" && p.name.trim() ? p.name.trim().slice(0, 40) : "Custom pack", lib };
+  state.learn.tpl = {};   // template keys changed; relearn preferences
+  state.board = null;
+  save(); render();
+  return null;
+}
+
+/* ===== skill manager ===== */
+let editingSkillId = null, skillAttr = "body";
+function openSkillModal(id, preAttr){
+  editingSkillId = id || null;
+  const s = id ? SK(id) : null;
+  $("#skill-title").textContent = s ? "Edit skill" : "New " + (preAttr ? ATTRS[preAttr].name + " skill" : "skill");
+  $("#s-name").value = "";
+  if(s) $("#s-name").value = s.name;
+  $("#s-kw").value = s ? (s.kw || []).join(", ") : "";
+  skillAttr = s ? s.attr : (preAttr || "body");
+  paintSkillModal();
+  const del = $("#s-delete");
+  del.style.display = s ? "" : "none";
+  del.classList.remove("arm"); del.textContent = "Retire";
+  $("#skillmodal").classList.add("on");
+  if(!s) setTimeout(() => $("#s-name").focus(), 120);
+}
+function paintSkillModal(){
+  $("#s-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === skillAttr ? " on" : "") + '" data-sattr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+}
+function closeSkillModal(){ $("#skillmodal").classList.remove("on"); editingSkillId = null; }
+function saveSkillModal(){
+  const name = $("#s-name").value.trim();
+  if(!name){ $("#s-name").focus(); return; }
+  const kw = $("#s-kw").value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 20);
+  if(editingSkillId){
+    const s = SK(editingSkillId);
+    if(s){ s.name = name; s.attr = skillAttr; s.kw = kw.length ? kw : [name.toLowerCase()]; }
+  }else{
+    state.skills.push(mkSkill(name, skillAttr, kw));
+  }
+  save(); render(); closeSkillModal();
+}
+/* Retiring a skill re-files its quests and bosses on the branch's next skill,
+   folding its XP in so nothing earned is lost. */
+function retireSkill(id){
+  const s = SK(id);
+  if(!s) return;
+  const heir = skillsFor(s.attr).find(x => x.id !== id) || null;
+  if(heir) heir.xp += s.xp;
+  for(const q of state.quests){ if(q.tag === id) q.tag = heir ? heir.id : classify(q.name, q.attr); }
+  for(const b of state.bosses){
+    if(b.tag !== id) continue;
+    if(heir){ b.tag = heir.id; b.attr = heir.attr; }
+    else b.defeated = b.defeated || Date.now();
+  }
+  state.skills = state.skills.filter(x => x.id !== id);
+  save(); render();
+}
+
+/* ===== campaigns: a long goal broken into a dated timeline of phases =====
+   Each phase becomes a boss on the bound skill, spawned one at a time, so the
+   long goal is always expressed as the next concrete stretch of sessions. */
+const PHASE_ARCS = {
+  3: ["Lay the groundwork", "Build momentum", "Final push"],
+  4: ["Lay the groundwork", "Build momentum", "Raise the stakes", "Final push"],
+  5: ["Lay the groundwork", "Build momentum", "Hold the line", "Raise the stakes", "Final push"],
+};
+function fmtDue(ms){
+  return new Date(ms).toLocaleDateString(undefined, { month:"short", day:"numeric" });
+}
+function planPhases(startMs, endMs, perWeek){
+  const days = Math.max(7, Math.round((endMs - startMs) / 86400000));
+  const weeks = Math.max(1, Math.round(days / 7));
+  const count = weeks <= 4 ? 3 : weeks <= 10 ? 4 : 5;
+  const total = Math.max(count, Math.round(weeks * perWeek));
+  const base = Math.floor(total / count), extra = total - base * count;
+  const names = PHASE_ARCS[count];
+  return names.map((nm, i) => ({
+    name: nm,
+    need: base + (i >= count - extra ? 1 : 0),
+    due: startMs + Math.round(days * ((i + 1) / count)) * 86400000,
+    done: null,
+  }));
+}
+function spawnPhaseBoss(c){
+  const ph = c.phases[c.idx];
+  if(!ph) return;
+  const b = mkBoss(c.name + " — " + ph.name, c.tag, ph.need);
+  b.campaign = c.id;
+  state.bosses.push(b);
+  c.bossId = b.id;
+}
+function createCampaign(name, tag, endMs, perWeek){
+  const c = { id: "c" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
+              name, tag, start: Date.now(), end: endMs, perWeek,
+              phases: planPhases(Date.now(), endMs, perWeek), idx: 0, bossId: null, done: null };
+  state.campaigns.push(c);
+  spawnPhaseBoss(c);
+  save(); render();
+  showToast("Campaign begun", c.phases.length + " phases · first: " + c.phases[0].name, null, null);
+}
+/* called when a boss dies; advances its campaign if it belonged to one */
+function advanceCampaign(boss){
+  const c = state.campaigns.find(x => x.id === boss.campaign);
+  if(!c || c.done) return null;
+  const ph = c.phases[c.idx];
+  if(ph) ph.done = Date.now();
+  c.idx++;
+  if(c.idx >= c.phases.length){
+    c.done = Date.now();
+    return { campaign: c, finished: true };
+  }
+  spawnPhaseBoss(c);
+  return { campaign: c, finished: false, next: c.phases[c.idx] };
+}
+function abandonCampaign(id){
+  const c = state.campaigns.find(x => x.id === id);
+  if(!c) return;
+  state.bosses = state.bosses.filter(b => b.campaign !== id || b.defeated);
+  state.campaigns = state.campaigns.filter(x => x.id !== id);
+  save(); render();
+}
+
+/* ---- campaign modal ---- */
+let campAttr = "craft", campTag = "trombone";
+function openCampModal(){
+  $("#c-name").value = "";
+  campAttr = "craft"; campTag = (skillsFor("craft")[0] || {}).id;
+  const d = new Date(); d.setDate(d.getDate() + 84);
+  $("#c-end").value = d.toISOString().slice(0, 10);
+  $("#c-per").value = 3;
+  paintCampModal();
+  $("#campmodal").classList.add("on");
+  setTimeout(() => $("#c-name").focus(), 120);
+}
+function closeCampModal(){ $("#campmodal").classList.remove("on"); }
+function paintCampModal(){
+  $("#c-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === campAttr ? " on" : "") + '" data-cattr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#c-tag").innerHTML = skillsFor(campAttr).map(o =>
+    '<button class="chip' + (o.id === campTag ? " on" : "") + '" data-ctag="' + o.id + '" style="--chipcol:' + ATTRS[campAttr].color + '">' +
+    esc(o.name) + '</button>').join("");
+  previewCamp();
+}
+function campEndMs(){
+  const v = $("#c-end").value;
+  const ms = v ? new Date(v + "T12:00:00").getTime() : 0;
+  const min = Date.now() + 7 * 86400000;
+  return Math.max(min, ms || min);
+}
+function previewCamp(){
+  const per = Math.max(1, Math.min(14, parseInt($("#c-per").value, 10) || 3));
+  const ph = planPhases(Date.now(), campEndMs(), per);
+  $("#c-preview").textContent = "Timeline: " + ph.length + " phases, " +
+    ph.reduce((t, p) => t + p.need, 0) + " sessions total — first checkpoint " + fmtDue(ph[0].due) + ".";
+}
+function saveCampModal(){
+  const name = $("#c-name").value.trim();
+  if(!name){ $("#c-name").focus(); return; }
+  if(!campTag){ return; }
+  const per = Math.max(1, Math.min(14, parseInt($("#c-per").value, 10) || 3));
+  createCampaign(name, campTag, campEndMs(), per);
+  closeCampModal();
+}
+
+/* ===== boss battles ===== */
+let victoryTimer = null;
+let editingBossId = null, bossAttr = "body", bossTag = "training";
+function spawnDamage(bossId, n, need){
+  if(!motionOK()) return;
+  const el = document.querySelector('[data-bosscard="' + bossId + '"]');
+  if(!el) return;
+  const s = document.createElement("span");
+  s.className = "dmgfloat";
+  s.textContent = n >= need ? "SLAIN!" : "HIT " + n + "/" + need;
+  el.appendChild(s);
+  setTimeout(() => s.remove(), 950);
+}
+function bossVictory(v){
+  $("#v-name").textContent = v.boss.name;
+  let bonus = "+" + v.bonusXp + " XP · +" + v.bonusGold + " gold";
+  if(v.camp && v.camp.finished) bonus += " · CAMPAIGN COMPLETE";
+  else if(v.camp && v.camp.next) bonus += " · Next: " + v.camp.next.name;
+  $("#v-bonus").textContent = bonus;
+  $("#victory").classList.add("on");
+  const app = document.getElementById("app");
+  app.classList.add("shake");
+  setTimeout(() => app.classList.remove("shake"), 600);
+  const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+  sparkBurst(cx, cy, "#A63D2E");
+  setTimeout(() => sparkBurst(cx * 0.7, cy * 0.85, "#D9A94E"), 150);
+  setTimeout(() => sparkBurst(cx * 1.3, cy * 0.9, "#E9BE68"), 300);
+  setTimeout(() => coinFountain(cx, cy), 350);
+  clearTimeout(victoryTimer);
+  victoryTimer = setTimeout(hideVictory, 3700);
+}
+function hideVictory(){ $("#victory").classList.remove("on"); clearTimeout(victoryTimer); }
+function openBossModal(id){
+  editingBossId = id || null;
+  const b = id ? state.bosses.find(x => x.id === id) : null;
+  $("#boss-title").textContent = b ? "Edit boss" : "Challenge a boss";
+  $("#b-name").value = b ? b.name : "";
+  $("#b-hp").value = b ? b.need : 5;
+  bossTag = b ? b.tag : "training";
+  bossAttr = (SK(bossTag) || skillsFor('body')[0]).attr;
+  paintBossModal();
+  const del = $("#b-delete");
+  del.style.display = b ? "" : "none";
+  del.classList.remove("arm"); del.textContent = "Abandon";
+  $("#bossmodal").classList.add("on");
+  if(!b) setTimeout(() => $("#b-name").focus(), 120);
+}
+function paintBossModal(){
+  $("#b-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === bossAttr ? " on" : "") + '" data-battr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#b-tag").innerHTML = skillsFor(bossAttr).map(o => o.id).map(k =>
+    '<button class="chip' + (k === bossTag ? " on" : "") + '" data-btag="' + k + '" style="--chipcol:' + ATTRS[bossAttr].color + '">' +
+    skillName(k) + '</button>').join("");
+  $("#b-foes").innerHTML = foesFor(bossTag).map(f =>
+    '<button class="chip" data-foe="' + esc(f) + '">' + esc(f) + '</button>').join("");
+}
+function closeBossModal(){ $("#bossmodal").classList.remove("on"); editingBossId = null; }
+function saveBossModal(){
+  const name = $("#b-name").value.trim();
+  if(!name){ $("#b-name").focus(); return; }
+  let need = parseInt($("#b-hp").value, 10);
+  if(!Number.isFinite(need)) need = 5;
+  need = Math.max(2, Math.min(60, need));
+  if(editingBossId){
+    const b = state.bosses.find(x => x.id === editingBossId);
+    if(b){
+      b.name = name; b.tag = bossTag; b.attr = SK(bossTag).attr;
+      b.need = Math.max(need, 1);
+      if(b.log.length > b.need) b.log.length = b.need - 1;   // never auto-slay by shrinking
+    }
+  }else{
+    state.bosses.push(mkBoss(name, bossTag, need));
+  }
+  save(); render(); closeBossModal();
+}
+
+/* ===== rewards ===== */
+let editingRewardId = null;
+function redeemReward(id){
+  const rw = state.rewards.find(r => r.id === id);
+  const cost = rewardCost(rw);
+  if(!rw || state.gold < cost) return false;
+  state.gold -= cost;
+  state.stats.redeems++;
+  const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost };
+  state.history.unshift(entry);
+  if(state.history.length > 600) state.history.length = 600;
+  save(); render();
+  const t = $("#toast");
+  t.innerHTML = '<span class="t-xp num gold-sub">−' + cost + ' gold</span>' +
+    '<span class="t-sub">' + esc(rw.name) + ' — claimed, go enjoy it</span>' +
+    '<button class="t-undo" data-unredeem="' + entry.ts + '">UNDO</button>';
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+  announceBadges(checkAchievements(), 5300);
+  return true;
+}
+function undoRedeem(ts){
+  const i = state.history.findIndex(h => h.type === "redeem" && h.ts === ts);
+  if(i < 0) return;
+  state.gold += state.history[i].cost;
+  state.stats.redeems = Math.max(0, state.stats.redeems - 1);
+  state.history.splice(i, 1);
+  hideToast(); save(); render();
+}
+function openRewardModal(id){
+  editingRewardId = id || null;
+  const rw = id ? state.rewards.find(r => r.id === id) : null;
+  $("#reward-title").textContent = rw ? "Edit reward" : "New reward";
+  $("#r-name").value = rw ? rw.name : "";
+  $("#r-cost").value = rw ? rw.cost : 100;
+  $("#r-cost-quick").innerHTML = [50,100,200,400].map(v => '<button class="chip num" data-rcost="' + v + '">' + v + '</button>').join("");
+  $("#rewardmodal").classList.add("on");
+  if(!rw) setTimeout(() => $("#r-name").focus(), 120);
+}
+function closeRewardModal(){ $("#rewardmodal").classList.remove("on"); editingRewardId = null; }
+function saveRewardModal(){
+  const name = $("#r-name").value.trim();
+  if(!name){ $("#r-name").focus(); return; }
+  let cost = parseInt($("#r-cost").value, 10);
+  if(!Number.isFinite(cost)) cost = 100;
+  cost = Math.max(10, Math.min(5000, Math.round(cost / 10) * 10));
+  if(editingRewardId){
+    const rw = state.rewards.find(r => r.id === editingRewardId);
+    if(rw){ rw.name = name; rw.cost = cost; }
+  }else{
+    state.rewards.push(mkReward(name, cost));
+  }
+  save(); render(); closeRewardModal();
+}
+
+/* ===== toast ===== */
+function showToast(xpText, sub, attr, undoId){
+  const t = $("#toast");
+  t.innerHTML = '<span class="t-xp num" style="color:' + (attr ? ATTRS[attr].color : "var(--accent-strong)") + '">' + esc(xpText) + '</span>' +
+    '<span class="t-sub">' + esc(sub) + '</span>' +
+    (undoId ? '<button class="t-undo" data-undo="' + undoId + '">UNDO</button>' : '');
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 4200);
+}
+function hideToast(){ $("#toast").classList.remove("on"); clearTimeout(toastTimer); }
+
+/* ===== level-up celebration ===== */
+function showLevelUp(level, attrKey, attrLevel){
+  $("#lu-level").textContent = level;
+  $("#lu-title").textContent = titleFor(level);
+  const extra = $("#lu-new");
+  if(attrKey){ extra.style.display = "block"; extra.textContent = ATTRS[attrKey].name + " also reached Lv " + attrLevel; }
+  else extra.style.display = "none";
+  $("#levelup").classList.add("on");
+  burst();
+  clearTimeout(luTimer);
+  luTimer = setTimeout(hideLevelUp, 3200);
+}
+function hideLevelUp(){ $("#levelup").classList.remove("on"); clearTimeout(luTimer); }
+
+let fxRaf = null;
+function burst(){
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = $("#fx"), ctx = c.getContext("2d");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
+  const cols = ["#D9A94E", "#E7BD6A", "#D95A4A", "#7C6EE6", "#3E9E6E", "#2FA3B8", "#D96A93"];
+  const P = Array.from({ length: 110 }, () => {
+    const a = Math.random() * Math.PI * 2, v = (2.5 + Math.random() * 7.5) * dpr;
+    return { x: c.width/2, y: c.height*0.42, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 3*dpr,
+             s: (2.5 + Math.random()*3.5)*dpr, r: Math.random()*Math.PI, vr: (Math.random()-0.5)*0.3,
+             col: cols[(Math.random()*cols.length)|0], life: 55 + Math.random()*45 };
+  });
+  cancelAnimationFrame(fxRaf);
+  (function tick(){
+    ctx.clearRect(0, 0, c.width, c.height);
+    let alive = 0;
+    for(const p of P){
+      if(p.life <= 0) continue;
+      alive++;
+      p.life--; p.x += p.vx; p.y += p.vy; p.vy += 0.16*dpr; p.vx *= 0.985; p.r += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.min(1, p.life/25);
+      ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.col;
+      ctx.fillRect(-p.s/2, -p.s/2, p.s, p.s*1.5); ctx.restore();
+    }
+    if(alive) fxRaf = requestAnimationFrame(tick);
+    else ctx.clearRect(0, 0, c.width, c.height);
+  })();
+}
+
+/* ===== ambient particle layer (tap bursts, coin fountains) ===== */
+const fx2 = document.getElementById("fx2");
+const fx2ctx = fx2.getContext("2d");
+let fx2Parts = [];
+let fx2Raf = null;
+function motionOK(){ return !window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+function fx2Spawn(parts){
+  if(!motionOK()) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(window.innerWidth * dpr), h = Math.round(window.innerHeight * dpr);
+  if(fx2.width !== w || fx2.height !== h){ fx2.width = w; fx2.height = h; }
+  fx2Parts.push(...parts);
+  if(!fx2Raf) fx2Tick();
+}
+function fx2Tick(){
+  fx2ctx.clearRect(0, 0, fx2.width, fx2.height);
+  fx2Parts = fx2Parts.filter(p => p.life > 0);
+  for(const p of fx2Parts){
+    p.life--; p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.99; p.rot += p.vr;
+    fx2ctx.save();
+    fx2ctx.globalAlpha = Math.min(1, p.life / 20);
+    fx2ctx.translate(p.x, p.y);
+    if(p.coin){
+      fx2ctx.scale(Math.max(0.18, Math.abs(Math.cos(p.rot))), 1);
+      fx2ctx.fillStyle = p.col;
+      fx2ctx.beginPath(); fx2ctx.arc(0, 0, p.s, 0, Math.PI * 2); fx2ctx.fill();
+      fx2ctx.strokeStyle = "rgba(60,40,0,.3)"; fx2ctx.lineWidth = Math.max(1, p.s * 0.22); fx2ctx.stroke();
+    }else{
+      fx2ctx.rotate(p.rot);
+      fx2ctx.fillStyle = p.col;
+      fx2ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+    }
+    fx2ctx.restore();
+  }
+  fx2Raf = fx2Parts.length ? requestAnimationFrame(fx2Tick)
+                           : (fx2ctx.clearRect(0, 0, fx2.width, fx2.height), null);
+}
+function sparkBurst(cx, cy, color){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const parts = [];
+  for(let i = 0; i < 16; i++){
+    const a = Math.random() * Math.PI * 2, v = (1.6 + Math.random() * 4.2) * dpr;
+    parts.push({ x: cx * dpr, y: cy * dpr, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2 * dpr,
+      g: 0.14 * dpr, s: (2 + Math.random() * 3) * dpr, rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.4, col: Math.random() < 0.35 ? "#D9A94E" : color,
+      life: 26 + Math.random() * 18, coin: false });
+  }
+  fx2Spawn(parts);
+}
+function coinFountain(cx, cy){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const golds = ["#D9A94E", "#E9BE68", "#B98A2F", "#F0D08A"];
+  const parts = [];
+  for(let i = 0; i < 26; i++){
+    parts.push({ x: cx * dpr, y: cy * dpr, vx: (Math.random() - 0.5) * 6 * dpr,
+      vy: (-5.5 - Math.random() * 5) * dpr, g: 0.32 * dpr, s: (3.4 + Math.random() * 2.6) * dpr,
+      rot: Math.random() * Math.PI, vr: 0.18 + Math.random() * 0.25,
+      col: golds[(Math.random() * golds.length) | 0], life: 60 + Math.random() * 35, coin: true });
+  }
+  fx2Spawn(parts);
+}
+
+/* ===== quest timer ===== */
+let timerInt = null;
+let audioCtx = null;
+function parseDuration(name){
+  let m = name.match(/(\d+)\s*[-–]?\s*(?:minutes?|mins?)\b/i);
+  if(m) return Math.max(1, Math.min(240, +m[1]));
+  m = name.match(/(\d+)\s*[-–]?\s*(?:hours?|hrs?)\b/i);
+  if(m) return Math.max(1, Math.min(240, +m[1] * 60));
+  return null;
+}
+function initAudio(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+  }catch(e){}
+}
+function chime(){
+  try{
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    [[880, 0], [1174.66, 0.18], [1318.5, 0.36]].forEach(([f, dt]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + dt);
+      g.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.5);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + dt); o.stop(t0 + dt + 0.55);
+    });
+  }catch(e){}
+}
+function fmtRemain(ms){
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+function startTimer(qid){
+  const q = state.quests.find(x => x.id === qid);
+  if(!q) return;
+  const mins = parseDuration(q.name);
+  if(!mins) return;
+  state.timer = { qid, mins, endsAt: Date.now() + mins * 60000 };
+  save(); initAudio();
+  clearInterval(timerInt);
+  timerInt = setInterval(tickTimer, 1000);
+  render();
+}
+function clearTimer(){
+  state.timer = null;
+  clearInterval(timerInt); timerInt = null;
+  save(); render();
+}
+function tickTimer(){
+  if(!state.timer){ clearInterval(timerInt); timerInt = null; return; }
+  const rem = state.timer.endsAt - Date.now();
+  if(rem <= 0){
+    clearInterval(timerInt); timerInt = null;
+    chime();
+    if(navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    renderTimerBar();
+  }else{
+    const el = document.getElementById("tb-time");
+    if(el) el.textContent = fmtRemain(rem);
+    const chip = document.getElementById("chip-time");
+    if(chip) chip.textContent = fmtRemain(rem);
+  }
+}
+function renderTimerBar(){
+  const bar = $("#timerbar");
+  const t = state.timer;
+  if(!t){ bar.className = ""; bar.innerHTML = ""; return; }
+  const q = state.quests.find(x => x.id === t.qid);
+  if(!q || completedNow(q)){ state.timer = null; save(); bar.className = ""; bar.innerHTML = ""; return; }
+  const rem = t.endsAt - Date.now();
+  if(rem <= 0){
+    bar.className = "on done";
+    bar.innerHTML = '<span class="tb-name">Time! ' + esc(q.name) + '</span>' +
+      '<button class="btn small" data-act="timer-complete">Complete +' + q.xp + '</button>' +
+      '<button class="icon-btn" data-act="timer-dismiss" aria-label="Dismiss timer">✕</button>';
+  }else{
+    bar.className = "on";
+    bar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>' +
+      '<span class="tb-name">' + esc(q.name) + '</span>' +
+      '<b class="tb-time num" id="tb-time">' + fmtRemain(rem) + '</b>' +
+      '<button class="icon-btn" data-act="timer-cancel" aria-label="Cancel timer">✕</button>';
+  }
+}
+
+/* ===== quest sheet (add / edit) ===== */
+let formAttr = "body", formType = "daily", formTag = "training", formTagTouched = false;
+function openSheet(id){
+  editingId = id || null;
+  const q = id ? state.quests.find(x => x.id === id) : null;
+  $("#sheet-title").textContent = q ? "Edit quest" : "New quest";
+  $("#f-name").value = q ? q.name : "";
+  $("#f-xp").value = q ? q.xp : 20;
+  formAttr = q ? q.attr : "body";
+  formTag = q && q.tag && SK(q.tag) ? q.tag : (skillsFor(formAttr)[0] || {}).id;
+  formTagTouched = !!q;
+  formType = q ? q.type : "daily";
+  paintSheet();
+  $("#modal").classList.add("on");
+  if(!q) setTimeout(() => $("#f-name").focus(), 120);
+}
+function closeSheet(){ $("#modal").classList.remove("on"); editingId = null; }
+function paintSheet(){
+  $("#f-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === formAttr ? " on" : "") + '" data-attr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#f-tag").innerHTML = skillsFor(formAttr).map(o => o.id).map(k =>
+    '<button class="chip' + (k === formTag ? " on" : "") + '" data-ftag="' + k + '" style="--chipcol:' + ATTRS[formAttr].color + '">' +
+    skillName(k) + '</button>').join("");
+  document.querySelectorAll("#f-type button").forEach(b => b.classList.toggle("on", b.dataset.v === formType));
+  $("#f-xp-quick").innerHTML = [10,20,30,50,75].map(v => '<button class="chip num" data-xp="' + v + '">' + v + '</button>').join("");
+}
+function saveSheet(){
+  const name = $("#f-name").value.trim();
+  if(!name){ $("#f-name").focus(); return; }
+  let xp = parseInt($("#f-xp").value, 10);
+  if(!Number.isFinite(xp)) xp = 20;
+  xp = Math.max(5, Math.min(500, xp));
+  upsertQuest({ name, attr: formAttr, xp, type: formType,
+                tag: formTagTouched ? formTag : classify(name, formAttr) });
+  closeSheet();
+}
+
+/* ===== events ===== */
+document.addEventListener("click", e => {
+  const undo = e.target.closest("[data-undo]");
+  if(undo){ uncompleteQuest(undo.dataset.undo); return; }
+  const unredeem = e.target.closest("[data-unredeem]");
+  if(unredeem){ undoRedeem(+unredeem.dataset.unredeem); return; }
+
+  const tab = e.target.closest(".tab");
+  if(tab){ currentTab = tab.dataset.tab; render(); window.scrollTo(0, 0); return; }
+
+  const act = e.target.closest("[data-act]");
+  if(act){
+    const id = act.dataset.id;
+    switch(act.dataset.act){
+      case "complete": {
+        const tick = act.querySelector(".tick");
+        const r = (tick || act).getBoundingClientRect();
+        const q = completeQuest(id);
+        if(q) sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        break;
+      }
+      case "uncomplete": uncompleteQuest(id); break;
+      case "timer":
+        if(!(state.timer && state.timer.qid === id && state.timer.endsAt > Date.now())) startTimer(id);
+        break;
+      case "timer-cancel":  clearTimer(); break;
+      case "timer-dismiss": clearTimer(); break;
+      case "timer-complete": {
+        const qid = state.timer && state.timer.qid;
+        const r = act.getBoundingClientRect();
+        const q = qid && completeQuest(qid, true);
+        if(q){
+          state.stats.timer++;
+          announceBadges(checkAchievements(), 1700);
+          save();
+          sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        }
+        break;
+      }
+      case "badge": {
+        const b = BADGES.find(x => x.id === id);
+        if(b){
+          const got = state.badges[b.id];
+          showToast(b.name, b.desc + (got ? " · earned " + new Date(got).toLocaleDateString() : " · not yet earned"), null, null);
+        }
+        break;
+      }
+      case "accept-offer": acceptOffer(+act.dataset.slot); break;
+      case "reroll-offer": rerollOffer(+act.dataset.slot); break;
+      case "redeem": {
+        const r = act.getBoundingClientRect();
+        if(redeemReward(id)) coinFountain(r.left + r.width / 2, r.top + r.height / 2);
+        break;
+      }
+      case "new-reward":  openRewardModal(null); break;
+      case "edit-reward": openRewardModal(id); break;
+      case "del-reward":
+        if(act.classList.contains("arm")){
+          state.rewards = state.rewards.filter(r => r.id !== id);
+          save(); render();
+        }else{
+          act.classList.add("arm"); act.textContent = "Delete?";
+          setTimeout(() => {
+            if(document.body.contains(act)){
+              act.classList.remove("arm");
+              act.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg>';
+            }
+          }, 2600);
+        }
+        break;
+      case "attr-toggle": openAttr = openAttr === id ? null : id; render(); break;
+      case "perk": openPerkModal(id); break;
+      case "skill-new":  openSkillModal(null); break;
+      case "skill-add":  openSkillModal(null, id); break;
+      case "skill-edit": openSkillModal(id); break;
+      case "camp-new":  openCampModal(); break;
+      case "camp-drop":
+        if(act.classList.contains("arm")) abandonCampaign(id);
+        else{
+          act.classList.add("arm"); act.textContent = "Drop?";
+          setTimeout(() => { if(document.body.contains(act)){ act.classList.remove("arm"); act.textContent = "\u2715"; } }, 2600);
+        }
+        break;
+      case "boss-new":  openBossModal(null); break;
+      case "boss-edit": openBossModal(id); break;
+      case "import-pack": openPackModal(); break;
+      case "reset-pack":
+        if(act.classList.contains("arm")){
+          state.pack = null; state.learn.tpl = {}; state.board = null;
+          save(); render();
+          showToast("Pack reset", "Back to " + DEFAULT_PACK.name, null, null);
+        }else{
+          act.classList.add("arm"); act.textContent = "Sure?";
+          setTimeout(() => {
+            if(document.body.contains(act)){ act.classList.remove("arm"); act.textContent = "Reset"; }
+          }, 2600);
+        }
+        break;
+      case "new":        openSheet(null); break;
+      case "edit":       openSheet(id); break;
+      case "del":
+        if(act.classList.contains("arm")){ deleteQuest(id); }
+        else{
+          act.classList.add("arm"); act.textContent = "Delete?";
+          setTimeout(() => {
+            if(document.body.contains(act)){
+              act.classList.remove("arm");
+              act.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg>';
+            }
+          }, 2600);
+        }
+        break;
+    }
+    return;
+  }
+
+  const chip = e.target.closest("[data-attr]");
+  if(chip){
+    formAttr = chip.dataset.attr;
+    if(!SK(formTag) || SK(formTag).attr !== formAttr){ formTag = (skillsFor(formAttr)[0] || {}).id; formTagTouched = false; }
+    paintSheet(); return;
+  }
+  const ftag = e.target.closest("[data-ftag]");
+  if(ftag){ formTag = ftag.dataset.ftag; formTagTouched = true; paintSheet(); return; }
+  const seg = e.target.closest("#f-type [data-v]");
+  if(seg){ formType = seg.dataset.v; paintSheet(); return; }
+  const qx = e.target.closest("[data-xp]");
+  if(qx){ $("#f-xp").value = qx.dataset.xp; return; }
+
+  if(e.target.id === "f-save"){ saveSheet(); return; }
+  if(e.target.id === "f-cancel"){ closeSheet(); return; }
+  if(e.target.id === "modal"){ closeSheet(); return; }
+  if(e.target.id === "pack-save"){
+    const err = importPack($("#pack-text").value);
+    if(err) $("#pack-err").textContent = err;
+    else { closePackModal(); showToast("Pack imported", state.pack.name + " now powers the board", null, null); }
+    return;
+  }
+  if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
+  if(e.target.id === "r-save"){ saveRewardModal(); return; }
+  if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  if(e.target.id === "p-unlock"){
+    const id = e.target.dataset.id;
+    closePerkModal();
+    unlockPerk(id);
+    return;
+  }
+  if(e.target.id === "p-close" || e.target.id === "perkmodal"){ closePerkModal(); return; }
+  if(e.target.id === "c-save"){ saveCampModal(); return; }
+  if(e.target.id === "c-cancel" || e.target.id === "campmodal"){ closeCampModal(); return; }
+  const cattr = e.target.closest("[data-cattr]");
+  if(cattr){ campAttr = cattr.dataset.cattr; campTag = (skillsFor(campAttr)[0] || {}).id; paintCampModal(); return; }
+  const ctag = e.target.closest("[data-ctag]");
+  if(ctag){ campTag = ctag.dataset.ctag; paintCampModal(); return; }
+  const wk = e.target.closest("[data-weeks]");
+  if(wk){
+    const d = new Date(); d.setDate(d.getDate() + (+wk.dataset.weeks) * 7);
+    $("#c-end").value = d.toISOString().slice(0, 10);
+    previewCamp();
+    return;
+  }
+  if(e.target.id === "s-save"){ saveSkillModal(); return; }
+  if(e.target.id === "s-cancel" || e.target.id === "skillmodal"){ closeSkillModal(); return; }
+  if(e.target.id === "s-delete"){
+    const del = e.target;
+    if(del.classList.contains("arm")){ retireSkill(editingSkillId); closeSkillModal(); }
+    else{
+      del.classList.add("arm"); del.textContent = "Retire?";
+      setTimeout(() => { del.classList.remove("arm"); del.textContent = "Retire"; }, 2600);
+    }
+    return;
+  }
+  const sattr = e.target.closest("[data-sattr]");
+  if(sattr){ skillAttr = sattr.dataset.sattr; paintSkillModal(); return; }
+  if(e.target.id === "b-save"){ saveBossModal(); return; }
+  if(e.target.id === "b-cancel" || e.target.id === "bossmodal"){ closeBossModal(); return; }
+  if(e.target.id === "b-delete"){
+    const del = e.target;
+    if(del.classList.contains("arm")){
+      state.bosses = state.bosses.filter(x => x.id !== editingBossId);
+      save(); render(); closeBossModal();
+    }else{
+      del.classList.add("arm"); del.textContent = "Abandon?";
+      setTimeout(() => { del.classList.remove("arm"); del.textContent = "Abandon"; }, 2600);
+    }
+    return;
+  }
+  const battr = e.target.closest("[data-battr]");
+  if(battr){ bossAttr = battr.dataset.battr; bossTag = (skillsFor(bossAttr)[0] || {}).id; paintBossModal(); return; }
+  const btag = e.target.closest("[data-btag]");
+  if(btag){ bossTag = btag.dataset.btag; paintBossModal(); return; }
+  const foe = e.target.closest("[data-foe]");
+  if(foe){ $("#b-name").value = foe.dataset.foe; return; }
+  const might = e.target.closest("[data-might]");
+  if(might){ $("#b-hp").value = might.dataset.might; return; }
+  if(e.target.closest("#victory")){ hideVictory(); return; }
+  const rc = e.target.closest("[data-rcost]");
+  if(rc){ $("#r-cost").value = rc.dataset.rcost; return; }
+  if(e.target.closest("#levelup")){ hideLevelUp(); return; }
+});
+document.addEventListener("input", e => {
+  if(e.target.id === "c-end" || e.target.id === "c-per") previewCamp();
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); closeCampModal(); closePerkModal(); hideLevelUp(); hideVictory(); }
+  if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
+});
+
+/* re-render when the app returns to the foreground on a new day/week */
+document.addEventListener("visibilitychange", () => { if(!document.hidden) render(); });
+
+/* ===== boot ===== */
+state = load();
+checkAchievements();   // grandfather badges already earned, quietly
+save();   // persist any migration applied during load
+render();
+initCalendar();
+if(state.timer && state.timer.endsAt > Date.now()){
+  timerInt = setInterval(tickTimer, 1000);   // resume a timer that was running when the app closed
+}
+setTimeout(() => {
+  $("#boot").classList.add("gone");
+  $("#app").style.display = "";
+  $("#tabbar").style.display = "";
+  setTimeout(() => $("#boot").remove(), 450);
+}, 420);
+
+})();
+</script>
