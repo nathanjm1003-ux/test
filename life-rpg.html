@@ -2,40 +2,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
   :root{
-    --bg:#EEF0F4; --surface:#FBFBFD; --raised:#FFFFFF; --line:#DBDFE8; --line-soft:#E6E9EF;
-    --text:#1C2230; --muted:#5C6575; --faint:#8A93A5;
-    --accent:#A87E24; --accent-strong:#8F6A1B; --accent-soft:#F0E6CC;
-    --shadow:0 1px 2px rgba(20,26,40,.05), 0 10px 28px rgba(20,26,40,.07);
-    --overlay:rgba(23,28,42,.45);
+    --bg:#E8DCC0; --surface:#F3EAD3; --raised:#F9F2DF; --line:#C3AF83; --line-soft:#D9CCA6;
+    --text:#2E2413; --muted:#6E5D40; --faint:#94825F;
+    --accent:#96701C; --accent-strong:#7A5A12; --accent-soft:#E5D5A6;
+    --crimson:#7E2C20; --crimson-strong:#5F1F16;
+    --shadow:0 1px 2px rgba(62,48,20,.14), 0 8px 22px rgba(62,48,20,.13);
+    --overlay:rgba(43,32,14,.5);
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#12141C; --surface:#1A1E29; --raised:#222736; --line:#2B3140; --line-soft:#242A38;
-      --text:#E9E7DF; --muted:#96A0B1; --faint:#6B7486;
-      --accent:#D9A94E; --accent-strong:#E7BD6A; --accent-soft:#37301D;
-      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
-      --overlay:rgba(6,8,14,.62);
+      --bg:#171208; --surface:#221B0D; --raised:#2B2312; --line:#4A3B20; --line-soft:#372C16;
+      --text:#EDE2C2; --muted:#A99878; --faint:#7C6D50;
+      --accent:#D9A94E; --accent-strong:#E9BE68; --accent-soft:#3B2F14;
+      --crimson:#A8442E; --crimson-strong:#C25940;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.45);
+      --overlay:rgba(10,7,2,.66);
     }
   }
   :root[data-theme="light"]{
-    --bg:#EEF0F4; --surface:#FBFBFD; --raised:#FFFFFF; --line:#DBDFE8; --line-soft:#E6E9EF;
-    --text:#1C2230; --muted:#5C6575; --faint:#8A93A5;
-    --accent:#A87E24; --accent-strong:#8F6A1B; --accent-soft:#F0E6CC;
-    --shadow:0 1px 2px rgba(20,26,40,.05), 0 10px 28px rgba(20,26,40,.07);
-    --overlay:rgba(23,28,42,.45);
+    --bg:#E8DCC0; --surface:#F3EAD3; --raised:#F9F2DF; --line:#C3AF83; --line-soft:#D9CCA6;
+    --text:#2E2413; --muted:#6E5D40; --faint:#94825F;
+    --accent:#96701C; --accent-strong:#7A5A12; --accent-soft:#E5D5A6;
+    --crimson:#7E2C20; --crimson-strong:#5F1F16;
+    --shadow:0 1px 2px rgba(62,48,20,.14), 0 8px 22px rgba(62,48,20,.13);
+    --overlay:rgba(43,32,14,.5);
   }
   :root[data-theme="dark"]{
-    --bg:#12141C; --surface:#1A1E29; --raised:#222736; --line:#2B3140; --line-soft:#242A38;
-    --text:#E9E7DF; --muted:#96A0B1; --faint:#6B7486;
-    --accent:#D9A94E; --accent-strong:#E7BD6A; --accent-soft:#37301D;
-    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
-    --overlay:rgba(6,8,14,.62);
+    --bg:#171208; --surface:#221B0D; --raised:#2B2312; --line:#4A3B20; --line-soft:#372C16;
+    --text:#EDE2C2; --muted:#A99878; --faint:#7C6D50;
+    --accent:#D9A94E; --accent-strong:#E9BE68; --accent-soft:#3B2F14;
+    --crimson:#A8442E; --crimson-strong:#C25940;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.45);
+    --overlay:rgba(10,7,2,.66);
   }
 
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    background:var(--bg); color:var(--text);
+    background:
+      radial-gradient(140% 100% at 50% 0%, color-mix(in srgb, var(--raised) 45%, transparent), transparent 55%),
+      radial-gradient(120% 120% at 50% 110%, color-mix(in srgb, var(--line) 22%, transparent), transparent 55%),
+      var(--bg);
+    color:var(--text);
     font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing:antialiased;
     min-height:100dvh;
@@ -54,7 +62,7 @@
   }
   #boot.gone{ opacity:0; pointer-events:none; }
   .boot-gem{ width:34px; height:34px; transform:rotate(45deg); border-radius:7px;
-    background:linear-gradient(135deg, var(--accent), var(--accent-strong));
+    background:linear-gradient(135deg, var(--crimson), var(--accent));
     animation:bootPulse 1.1s ease-in-out infinite; }
   #boot p{ margin:0; color:var(--muted); font-size:13px; letter-spacing:.14em; text-transform:uppercase; }
   @keyframes bootPulse{ 0%,100%{ transform:rotate(45deg) scale(1); opacity:.85; } 50%{ transform:rotate(45deg) scale(1.12); opacity:1; } }
@@ -68,14 +76,24 @@
   .view{ display:none; flex-direction:column; gap:16px; }
   .view.on{ display:flex; }
   .screen-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:4px 2px 0; }
-  .screen-head h1{ margin:0; font-size:24px; letter-spacing:.01em; }
+  .screen-head h1{ margin:0; font-size:24px; letter-spacing:.06em; font-variant:small-caps; color:var(--crimson); }
   .screen-head .sub{ color:var(--muted); font-size:13px; }
 
   /* ---------- character card ---------- */
   .char{
     background:var(--surface); border:1px solid var(--line); border-radius:16px;
-    box-shadow:var(--shadow); padding:16px;
+    box-shadow:var(--shadow); padding:18px 16px 16px; position:relative;
   }
+  .char::before, .wallet::before{
+    content:""; position:absolute; inset:5px; border:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    border-radius:11px; pointer-events:none;
+  }
+  .char::after, .wallet::after{
+    content:""; position:absolute; top:-5px; left:50%; width:9px; height:9px;
+    background:var(--crimson); transform:translateX(-50%) rotate(45deg); border-radius:2px;
+  }
+  .wallet{ position:relative; }
+  .wallet::after{ background:var(--accent); }
   .char-top{ display:flex; align-items:center; gap:16px; }
   .ring-wrap{ position:relative; width:76px; height:76px; flex:none; }
   .ring-wrap svg{ display:block; width:76px; height:76px; }
@@ -85,7 +103,7 @@
   .ring-lvl b{ font-size:26px; line-height:1; }
   .ring-lvl span{ font-size:9px; letter-spacing:.16em; color:var(--muted); text-transform:uppercase; margin-top:2px; }
   .char-id{ min-width:0; flex:1; }
-  .char-title{ margin:0; font-size:22px; line-height:1.15; text-wrap:balance; }
+  .char-title{ margin:0; font-size:23px; line-height:1.15; text-wrap:balance; font-variant:small-caps; letter-spacing:.04em; }
   .char-sub{ margin:3px 0 0; color:var(--muted); font-size:13px; }
   .char-xp{ margin-top:10px; }
   .xp-row{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:4px; }
@@ -104,7 +122,10 @@
 
   /* ---------- sections & quest rows ---------- */
   .sect{ display:flex; flex-direction:column; gap:8px; }
-  .sect-label{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); padding:2px 2px 0; display:flex; justify-content:space-between; }
+  .sect-label{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--crimson); font-weight:700;
+    padding:2px 2px 5px; display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .sect-label span + span{ color:var(--muted); font-weight:500; }
   .q{
     display:flex; align-items:center; gap:12px; text-align:left; width:100%;
     background:var(--surface); border:1px solid var(--line); border-radius:14px;
@@ -120,7 +141,8 @@
   .q.done .tick::after{ content:""; width:6px; height:11px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg) translate(-1px,-1px); }
   .q.done .q-name{ text-decoration:line-through; text-decoration-color:var(--faint); }
   .q-main{ min-width:0; flex:1; }
-  .q-name{ font-weight:600; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .q-name{ font-weight:600; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
   .q-meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:2px; }
   .dot{ width:7px; height:7px; border-radius:2px; transform:rotate(45deg); display:inline-block; }
   .streak{ color:var(--accent-strong); font-weight:600; }
@@ -157,17 +179,26 @@
   .pack-err{ margin:0; font-size:13px; color:#C24A33; min-height:1em; }
   textarea.f-input{ resize:vertical; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; line-height:1.5; }
 
+  /* ---------- rewards ---------- */
+  .wallet{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow); display:flex; align-items:center; gap:14px; }
+  .coin-gem{ width:34px; height:34px; flex:none; border-radius:8px; transform:rotate(45deg); margin:4px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-strong)); }
+  .wallet-n{ font-size:30px; line-height:1; }
+  .wallet small{ display:block; color:var(--muted); font-size:12px; margin-top:3px; }
+  .rw-cost{ font-weight:700; color:var(--accent-strong); }
+  .btn.small{ padding:7px 12px; font-size:13px; white-space:nowrap; }
+  .btn.off{ opacity:.45; pointer-events:none; }
+  .gold-sub{ color:var(--accent-strong); font-weight:600; }
+
   /* ---------- quests manage ---------- */
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px;
-    background:var(--accent); color:#fff; font-weight:600; font-size:14px;
-    border-radius:10px; padding:9px 14px;
+    background:var(--crimson); color:#F6EFDC; font-weight:600; font-size:14px;
+    border-radius:10px; padding:9px 14px; border:1px solid var(--crimson-strong);
   }
-  :root[data-theme="dark"] .btn, .btn{ color:#171310; }
-  @media (prefers-color-scheme: light){ .btn{ color:#fff; } }
-  :root[data-theme="light"] .btn{ color:#fff; }
   .btn.ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); font-weight:500; }
   .mq{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow); }
+  .mq .q-name{ white-space:normal; line-height:1.25; }
   .mq .q-main{ flex:1; min-width:0; }
   .icon-btn{ flex:none; width:34px; height:34px; border-radius:9px; border:1px solid var(--line); color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:13px; }
   .icon-btn.danger.arm{ background:#B3432E; border-color:#B3432E; color:#fff; font-size:11px; width:auto; padding:0 9px; }
@@ -221,8 +252,8 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal, #packmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on, #packmodal.on{ display:flex; }
+  #modal, #packmodal, #rewardmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on{ display:flex; }
   .sheet{
     width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
     border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
@@ -252,6 +283,7 @@
 <div id="app" style="display:none">
   <main class="view" id="view-today" aria-label="Today"></main>
   <main class="view" id="view-quests" aria-label="Quests"></main>
+  <main class="view" id="view-rewards" aria-label="Rewards"></main>
   <main class="view" id="view-history" aria-label="History"></main>
 </div>
 
@@ -263,6 +295,10 @@
   <button class="tab" data-tab="quests" aria-label="Quests">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
     Quests
+  </button>
+  <button class="tab" data-tab="rewards" aria-label="Rewards">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10l4 5-9 11L3 9l4-5z"/><path d="M3 9h18M12 20L8.5 9l2-5M12 20l3.5-11-2-5"/></svg>
+    Rewards
   </button>
   <button class="tab" data-tab="history" aria-label="History">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
@@ -313,6 +349,25 @@
   </div>
 </div>
 
+<div id="rewardmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reward-title">
+    <h2 id="reward-title">New reward</h2>
+    <div>
+      <label class="f-label" for="r-name">Reward</label>
+      <input class="f-input" id="r-name" type="text" maxlength="60" placeholder="e.g. Movie night, zero guilt" autocomplete="off">
+    </div>
+    <div>
+      <label class="f-label" for="r-cost">Cost in gold</label>
+      <input class="f-input num" id="r-cost" type="number" min="10" max="5000" step="10" inputmode="numeric">
+      <div class="xp-quick" id="r-cost-quick"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="r-cancel">Cancel</button>
+      <button class="btn" id="r-save">Save reward</button>
+    </div>
+  </div>
+</div>
+
 <div id="packmodal">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pack-title">
     <h2 id="pack-title">Import quest pack</h2>
@@ -336,11 +391,11 @@
 /* ===== constants ===== */
 const KEY = "life-rpg-v1";
 const ATTRS = {
-  body:   { name:"Body",   desc:"fitness & health",   color:"#D95A4A" },
-  mind:   { name:"Mind",   desc:"study & learning",   color:"#7C6EE6" },
-  grind:  { name:"Grind",  desc:"work & money",       color:"#3E9E6E" },
-  craft:  { name:"Craft",  desc:"creative projects",  color:"#2FA3B8" },
-  social: { name:"Social", desc:"relationships",      color:"#D96A93" },
+  body:   { name:"Body",   desc:"fitness & health",   color:"#A63D2E" },
+  mind:   { name:"Mind",   desc:"study & learning",   color:"#5D4E9C" },
+  grind:  { name:"Grind",  desc:"work & money",       color:"#4E7A46" },
+  craft:  { name:"Craft",  desc:"creative projects",  color:"#3E7580" },
+  social: { name:"Social", desc:"relationships",      color:"#A34E68" },
 };
 const TITLES = [[1,"Novice"],[3,"Apprentice"],[5,"Adept"],[8,"Journeyman"],[12,"Veteran"],[16,"Expert"],[21,"Master"],[27,"Grandmaster"],[34,"Legend"],[42,"Mythic"]];
 const TYPE_LABEL = { daily:"Daily", weekly:"Weekly", oneoff:"One-off" };
@@ -357,9 +412,25 @@ let editingId = null;          // quest being edited in the sheet, or null for n
 let toastTimer = null;
 let luTimer = null;
 
+function defaultRewards(){
+  return [
+    mkReward("Guilt-free YouTube hour", 60),
+    mkReward("Game session — zero guilt", 80),
+    mkReward("Order the good takeout", 120),
+    mkReward("Browse 2nd & Charles, buy something small", 150),
+    mkReward("Next audiobook credit", 200),
+    mkReward("Lazy morning — no alarm, no agenda", 250),
+  ];
+}
+function mkReward(name, cost){
+  return { id: "r" + Math.random().toString(36).slice(2,9) + Date.now().toString(36), name, cost };
+}
+
 function defaultState(){
   return {
     xp: 0,
+    gold: 0,
+    rewards: defaultRewards(),
     attrs: { body:0, mind:0, grind:0, craft:0, social:0 },
     quests: [
       mkQuest("Move for 30 minutes", "body", 30, "daily"),
@@ -385,6 +456,8 @@ function load(){
       if(s && typeof s.xp === "number" && s.attrs && Array.isArray(s.quests)){
         if(!s.learn || !s.learn.tpl) s.learn = { tpl:{}, slot:{} };
         if(!("pack" in s)) s.pack = null;
+        if(typeof s.gold !== "number") s.gold = s.xp || 0;   // retroactive: 1 gold per XP already earned
+        if(!Array.isArray(s.rewards)) s.rewards = defaultRewards();
         return s;
       }
     }
@@ -704,6 +777,7 @@ function completeQuest(id){
   }
 
   state.xp += q.xp;
+  state.gold += q.xp;
   state.attrs[q.attr] += q.xp;
   if(q.src) LT(q.src).c++;
 
@@ -724,6 +798,7 @@ function completeQuest(id){
     let sub = ATTRS[q.attr].name;
     if(afterAttr > beforeAttr) sub += " reached Lv " + afterAttr;
     else if(q.type === "daily" && q.streak >= 2) sub += " · " + q.streak + "-day streak";
+    sub += " · +" + q.xp + " gold";
     showToast("+" + q.xp + " XP", sub, q.attr, id);
   }
 }
@@ -738,6 +813,7 @@ function uncompleteQuest(id){
   q.lastWeek = q.prev.lastWeek; q.done = q.prev.done; q.prev = null;
 
   state.xp = Math.max(0, state.xp - q.xp);
+  state.gold = Math.max(0, state.gold - q.xp);
   state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
   if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
 
@@ -791,7 +867,7 @@ function charCardHTML(){
       '</svg><div class="ring-lvl"><b class="serif num">' + ci.level + '</b><span>level</span></div></div>' +
       '<div class="char-id">' +
         '<h2 class="char-title serif">' + titleFor(ci.level) + '</h2>' +
-        '<p class="char-sub">Total <span class="num">' + state.xp.toLocaleString() + '</span> XP earned</p>' +
+        '<p class="char-sub"><span class="num">' + state.xp.toLocaleString() + '</span> XP · <span class="gold-sub num">' + state.gold.toLocaleString() + ' gold</span></p>' +
       '</div>' +
     '</div>' +
     '<div class="char-xp"><div class="xp-row"><span>Next level</span><span class="num">' + ci.into + ' / ' + ci.need + ' XP</span></div>' +
@@ -911,6 +987,12 @@ function renderHistory(){
         parts.push('<div class="day-label">' + label + '</div>');
       }
       const t = new Date(h.ts).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+      if(h.type === "redeem"){
+        parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
+          '<span class="h-main">' + esc(h.name) + '<small>Reward claimed</small></span>' +
+          '<span class="h-xp num gold-sub">−' + h.cost + '</span></div>');
+        continue;
+      }
       let badges = "";
       if(h.cu) badges += '<span class="lu-badge">Lv ' + h.cu + '</span>';
       if(h.au) badges += '<span class="lu-badge">' + ATTRS[h.attr].name + ' ' + h.au + '</span>';
@@ -923,9 +1005,35 @@ function renderHistory(){
   $("#view-history").innerHTML = html;
 }
 
+function renderRewards(){
+  let html = '<div class="screen-head"><h1 class="serif">Rewards</h1><button class="btn" data-act="new-reward">+ New reward</button></div>';
+  html += '<div class="wallet"><span class="coin-gem"></span><div>' +
+    '<div class="wallet-n serif num">' + state.gold.toLocaleString() + '</div>' +
+    '<small>gold in the coffers — every XP earned mints one coin</small></div></div>';
+  html += '<div class="sect"><div class="sect-label"><span>Treasury</span><span>' + state.rewards.length + ' rewards</span></div>';
+  if(!state.rewards.length){
+    html += '<div class="empty">The treasury is bare. Add a reward worth questing for.</div>';
+  }else{
+    html += state.rewards.slice().sort((a, b) => a.cost - b.cost).map(rw => {
+      const can = state.gold >= rw.cost;
+      return '<div class="mq"><span class="q-main"><span class="q-name">' + esc(rw.name) + '</span>' +
+        '<span class="q-meta"><span class="rw-cost num">' + rw.cost + ' gold</span>' +
+        (can ? '' : '<span>· ' + (rw.cost - state.gold) + ' more to go</span>') + '</span></span>' +
+        '<button class="btn small' + (can ? '' : ' off') + '" data-act="redeem" data-id="' + rw.id + '">Claim</button>' +
+        '<button class="icon-btn" data-act="edit-reward" data-id="' + rw.id + '" aria-label="Edit reward">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>' +
+        '<button class="icon-btn danger" data-act="del-reward" data-id="' + rw.id + '" aria-label="Delete reward">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg></button>' +
+      '</div>';
+    }).join("");
+  }
+  html += '</div>';
+  $("#view-rewards").innerHTML = html;
+}
+
 function render(){
   ensureBoard();
-  renderToday(); renderQuests(); renderHistory();
+  renderToday(); renderQuests(); renderRewards(); renderHistory();
   document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
   $("#view-" + currentTab).classList.add("on");
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === currentTab));
@@ -1027,6 +1135,57 @@ function importPack(txt){
   return null;
 }
 
+/* ===== rewards ===== */
+let editingRewardId = null;
+function redeemReward(id){
+  const rw = state.rewards.find(r => r.id === id);
+  if(!rw || state.gold < rw.cost) return;
+  state.gold -= rw.cost;
+  const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost: rw.cost };
+  state.history.unshift(entry);
+  if(state.history.length > 600) state.history.length = 600;
+  save(); render();
+  const t = $("#toast");
+  t.innerHTML = '<span class="t-xp num gold-sub">−' + rw.cost + ' gold</span>' +
+    '<span class="t-sub">' + esc(rw.name) + ' — claimed, go enjoy it</span>' +
+    '<button class="t-undo" data-unredeem="' + entry.ts + '">UNDO</button>';
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function undoRedeem(ts){
+  const i = state.history.findIndex(h => h.type === "redeem" && h.ts === ts);
+  if(i < 0) return;
+  state.gold += state.history[i].cost;
+  state.history.splice(i, 1);
+  hideToast(); save(); render();
+}
+function openRewardModal(id){
+  editingRewardId = id || null;
+  const rw = id ? state.rewards.find(r => r.id === id) : null;
+  $("#reward-title").textContent = rw ? "Edit reward" : "New reward";
+  $("#r-name").value = rw ? rw.name : "";
+  $("#r-cost").value = rw ? rw.cost : 100;
+  $("#r-cost-quick").innerHTML = [50,100,200,400].map(v => '<button class="chip num" data-rcost="' + v + '">' + v + '</button>').join("");
+  $("#rewardmodal").classList.add("on");
+  if(!rw) setTimeout(() => $("#r-name").focus(), 120);
+}
+function closeRewardModal(){ $("#rewardmodal").classList.remove("on"); editingRewardId = null; }
+function saveRewardModal(){
+  const name = $("#r-name").value.trim();
+  if(!name){ $("#r-name").focus(); return; }
+  let cost = parseInt($("#r-cost").value, 10);
+  if(!Number.isFinite(cost)) cost = 100;
+  cost = Math.max(10, Math.min(5000, Math.round(cost / 10) * 10));
+  if(editingRewardId){
+    const rw = state.rewards.find(r => r.id === editingRewardId);
+    if(rw){ rw.name = name; rw.cost = cost; }
+  }else{
+    state.rewards.push(mkReward(name, cost));
+  }
+  save(); render(); closeRewardModal();
+}
+
 /* ===== toast ===== */
 function showToast(xpText, sub, attr, undoId){
   const t = $("#toast");
@@ -1119,6 +1278,8 @@ function saveSheet(){
 document.addEventListener("click", e => {
   const undo = e.target.closest("[data-undo]");
   if(undo){ uncompleteQuest(undo.dataset.undo); return; }
+  const unredeem = e.target.closest("[data-unredeem]");
+  if(unredeem){ undoRedeem(+unredeem.dataset.unredeem); return; }
 
   const tab = e.target.closest(".tab");
   if(tab){ currentTab = tab.dataset.tab; render(); window.scrollTo(0, 0); return; }
@@ -1131,6 +1292,23 @@ document.addEventListener("click", e => {
       case "uncomplete": uncompleteQuest(id); break;
       case "accept-offer": acceptOffer(+act.dataset.slot); break;
       case "reroll-offer": rerollOffer(+act.dataset.slot); break;
+      case "redeem":      redeemReward(id); break;
+      case "new-reward":  openRewardModal(null); break;
+      case "edit-reward": openRewardModal(id); break;
+      case "del-reward":
+        if(act.classList.contains("arm")){
+          state.rewards = state.rewards.filter(r => r.id !== id);
+          save(); render();
+        }else{
+          act.classList.add("arm"); act.textContent = "Delete?";
+          setTimeout(() => {
+            if(document.body.contains(act)){
+              act.classList.remove("arm");
+              act.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2m-7 0l1 13h8l1-13"/></svg>';
+            }
+          }, 2600);
+        }
+        break;
       case "import-pack": openPackModal(); break;
       case "reset-pack":
         if(act.classList.contains("arm")){
@@ -1179,10 +1357,14 @@ document.addEventListener("click", e => {
     return;
   }
   if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
+  if(e.target.id === "r-save"){ saveRewardModal(); return; }
+  if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  const rc = e.target.closest("[data-rcost]");
+  if(rc){ $("#r-cost").value = rc.dataset.rcost; return; }
   if(e.target.closest("#levelup")){ hideLevelUp(); return; }
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); closePackModal(); hideLevelUp(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); hideLevelUp(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
@@ -1191,6 +1373,7 @@ document.addEventListener("visibilitychange", () => { if(!document.hidden) rende
 
 /* ===== boot ===== */
 state = load();
+save();   // persist any migration applied during load
 render();
 initCalendar();
 setTimeout(() => {
