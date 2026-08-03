@@ -225,14 +225,45 @@
   .tab svg{ width:21px; height:21px; }
   .tab.on{ color:var(--accent-strong); }
 
+  /* ---------- effects ---------- */
+  #fx2{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:44; }
+  .tick.pop{ animation:tickPop .45s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes tickPop{ 0%{ transform:scale(.3); } 60%{ transform:scale(1.3); } 100%{ transform:scale(1); } }
+  .btn:active, .icon-btn:active, .tab:active{ transform:scale(.95); }
+  #levelup.on::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(circle at 50% 42%, rgba(233,190,104,.5), transparent 60%);
+    animation:luFlash .8s ease-out forwards;
+  }
+  @keyframes luFlash{ from{ opacity:1; } to{ opacity:0; } }
+
+  /* ---------- timer ---------- */
+  #timerbar{
+    position:fixed; left:12px; right:12px; bottom:calc(78px + env(safe-area-inset-bottom)); z-index:30;
+    display:none; align-items:center; gap:10px; max-width:456px; margin:0 auto;
+    background:var(--raised); border:1px solid var(--accent); border-radius:14px;
+    padding:10px 14px; box-shadow:var(--shadow); color:var(--muted);
+  }
+  #timerbar.on{ display:flex; }
+  #timerbar.done{ border-color:var(--accent-strong); background:color-mix(in srgb, var(--accent-soft) 55%, var(--raised)); }
+  .tb-name{ flex:1; min-width:0; font-weight:600; font-size:14px; color:var(--text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .tb-time{ font-size:18px; color:var(--accent-strong); }
+  #timerbar .icon-btn{ width:30px; height:30px; font-size:12px; }
+  .q-timer{ flex:none; display:inline-flex; align-items:center; gap:4px;
+    border:1px solid var(--line); border-radius:99px; padding:3px 9px;
+    font-size:12px; color:var(--muted); }
+  .q-timer.live{ border-color:var(--accent); color:var(--accent-strong); font-weight:700; }
+
   /* ---------- toast ---------- */
   #toast{
-    position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); z-index:40;
+    position:fixed; left:50%; bottom:calc(140px + env(safe-area-inset-bottom)); z-index:40;
     transform:translate(-50%, 16px); opacity:0; pointer-events:none;
     display:flex; align-items:center; gap:12px;
     background:var(--raised); border:1px solid var(--line); box-shadow:var(--shadow);
     border-radius:99px; padding:10px 16px; font-size:14px; white-space:nowrap;
-    transition:transform .22s ease, opacity .22s ease;
+    transition:transform .3s cubic-bezier(.2,1.4,.4,1), opacity .22s ease;
   }
   #toast.on{ transform:translate(-50%,0); opacity:1; pointer-events:auto; }
   #toast .t-xp{ font-weight:700; }
@@ -305,6 +336,10 @@
     History
   </button>
 </nav>
+
+<canvas id="fx2" aria-hidden="true"></canvas>
+
+<div id="timerbar"></div>
 
 <div id="toast"></div>
 
@@ -756,9 +791,10 @@ function acceptOffer(i){
 }
 
 /* ===== mutations ===== */
+let justDoneId = null;
 function completeQuest(id){
   const q = state.quests.find(x => x.id === id);
-  if(!q || completedNow(q)) return;
+  if(!q || completedNow(q)) return null;
 
   const beforeChar = levelInfo(state.xp, charNeed).level;
   const beforeAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
@@ -790,6 +826,10 @@ function completeQuest(id){
   state.history.unshift(entry);
   if(state.history.length > 600) state.history.length = 600;
 
+  if(state.timer && state.timer.qid === q.id){ state.timer = null; clearInterval(timerInt); timerInt = null; }
+  justDoneId = q.id;
+  setTimeout(() => { justDoneId = null; }, 700);
+
   save(); render();
 
   if(afterChar > beforeChar){
@@ -801,6 +841,7 @@ function completeQuest(id){
     sub += " · +" + q.xp + " gold";
     showToast("+" + q.xp + " XP", sub, q.attr, id);
   }
+  return q;
 }
 
 function uncompleteQuest(id){
@@ -882,10 +923,18 @@ function questRowHTML(q){
   const meta = ['<span class="dot" style="background:' + ATTRS[q.attr].color + '"></span> ' + ATTRS[q.attr].name,
                 TYPE_LABEL[q.type]];
   if(st >= 2) meta.push('<span class="streak">' + st + '-day streak</span>');
+  const mins = done ? null : parseDuration(q.name);
+  const live = state.timer && state.timer.qid === q.id && state.timer.endsAt > Date.now();
+  const timerChip = mins
+    ? '<span class="q-timer' + (live ? " live" : "") + '" data-act="timer" data-id="' + q.id + '" role="button" aria-label="Start ' + mins + '-minute timer">' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>' +
+      (live ? '<b class="num" id="chip-time">' + fmtRemain(state.timer.endsAt - Date.now()) + '</b>' : mins + 'm') + '</span>'
+    : '';
   return '<button class="q' + (done ? " done" : "") + '" data-act="' + (done ? "uncomplete" : "complete") + '" data-id="' + q.id + '" style="--qcol:' + ATTRS[q.attr].color + '">' +
-    '<span class="tick" aria-hidden="true"></span>' +
+    '<span class="tick' + (done && q.id === justDoneId ? " pop" : "") + '" aria-hidden="true"></span>' +
     '<span class="q-main"><span class="q-name">' + esc(q.name) + '</span>' +
     '<span class="q-meta">' + meta.join(" · ") + '</span></span>' +
+    timerChip +
     '<span class="q-xp num">+' + q.xp + '</span></button>';
 }
 
@@ -1034,6 +1083,7 @@ function renderRewards(){
 function render(){
   ensureBoard();
   renderToday(); renderQuests(); renderRewards(); renderHistory();
+  renderTimerBar();
   document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
   $("#view-" + currentTab).classList.add("on");
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === currentTab));
@@ -1139,7 +1189,7 @@ function importPack(txt){
 let editingRewardId = null;
 function redeemReward(id){
   const rw = state.rewards.find(r => r.id === id);
-  if(!rw || state.gold < rw.cost) return;
+  if(!rw || state.gold < rw.cost) return false;
   state.gold -= rw.cost;
   const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost: rw.cost };
   state.history.unshift(entry);
@@ -1152,6 +1202,7 @@ function redeemReward(id){
   t.classList.add("on");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, 5000);
+  return true;
 }
 function undoRedeem(ts){
   const i = state.history.findIndex(h => h.type === "redeem" && h.ts === ts);
@@ -1242,6 +1293,155 @@ function burst(){
   })();
 }
 
+/* ===== ambient particle layer (tap bursts, coin fountains) ===== */
+const fx2 = document.getElementById("fx2");
+const fx2ctx = fx2.getContext("2d");
+let fx2Parts = [];
+let fx2Raf = null;
+function motionOK(){ return !window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+function fx2Spawn(parts){
+  if(!motionOK()) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(window.innerWidth * dpr), h = Math.round(window.innerHeight * dpr);
+  if(fx2.width !== w || fx2.height !== h){ fx2.width = w; fx2.height = h; }
+  fx2Parts.push(...parts);
+  if(!fx2Raf) fx2Tick();
+}
+function fx2Tick(){
+  fx2ctx.clearRect(0, 0, fx2.width, fx2.height);
+  fx2Parts = fx2Parts.filter(p => p.life > 0);
+  for(const p of fx2Parts){
+    p.life--; p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.99; p.rot += p.vr;
+    fx2ctx.save();
+    fx2ctx.globalAlpha = Math.min(1, p.life / 20);
+    fx2ctx.translate(p.x, p.y);
+    if(p.coin){
+      fx2ctx.scale(Math.max(0.18, Math.abs(Math.cos(p.rot))), 1);
+      fx2ctx.fillStyle = p.col;
+      fx2ctx.beginPath(); fx2ctx.arc(0, 0, p.s, 0, Math.PI * 2); fx2ctx.fill();
+      fx2ctx.strokeStyle = "rgba(60,40,0,.3)"; fx2ctx.lineWidth = Math.max(1, p.s * 0.22); fx2ctx.stroke();
+    }else{
+      fx2ctx.rotate(p.rot);
+      fx2ctx.fillStyle = p.col;
+      fx2ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+    }
+    fx2ctx.restore();
+  }
+  fx2Raf = fx2Parts.length ? requestAnimationFrame(fx2Tick)
+                           : (fx2ctx.clearRect(0, 0, fx2.width, fx2.height), null);
+}
+function sparkBurst(cx, cy, color){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const parts = [];
+  for(let i = 0; i < 16; i++){
+    const a = Math.random() * Math.PI * 2, v = (1.6 + Math.random() * 4.2) * dpr;
+    parts.push({ x: cx * dpr, y: cy * dpr, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2 * dpr,
+      g: 0.14 * dpr, s: (2 + Math.random() * 3) * dpr, rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.4, col: Math.random() < 0.35 ? "#D9A94E" : color,
+      life: 26 + Math.random() * 18, coin: false });
+  }
+  fx2Spawn(parts);
+}
+function coinFountain(cx, cy){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const golds = ["#D9A94E", "#E9BE68", "#B98A2F", "#F0D08A"];
+  const parts = [];
+  for(let i = 0; i < 26; i++){
+    parts.push({ x: cx * dpr, y: cy * dpr, vx: (Math.random() - 0.5) * 6 * dpr,
+      vy: (-5.5 - Math.random() * 5) * dpr, g: 0.32 * dpr, s: (3.4 + Math.random() * 2.6) * dpr,
+      rot: Math.random() * Math.PI, vr: 0.18 + Math.random() * 0.25,
+      col: golds[(Math.random() * golds.length) | 0], life: 60 + Math.random() * 35, coin: true });
+  }
+  fx2Spawn(parts);
+}
+
+/* ===== quest timer ===== */
+let timerInt = null;
+let audioCtx = null;
+function parseDuration(name){
+  let m = name.match(/(\d+)\s*[-–]?\s*(?:minutes?|mins?)\b/i);
+  if(m) return Math.max(1, Math.min(240, +m[1]));
+  m = name.match(/(\d+)\s*[-–]?\s*(?:hours?|hrs?)\b/i);
+  if(m) return Math.max(1, Math.min(240, +m[1] * 60));
+  return null;
+}
+function initAudio(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+  }catch(e){}
+}
+function chime(){
+  try{
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    [[880, 0], [1174.66, 0.18], [1318.5, 0.36]].forEach(([f, dt]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + dt);
+      g.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.5);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + dt); o.stop(t0 + dt + 0.55);
+    });
+  }catch(e){}
+}
+function fmtRemain(ms){
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+function startTimer(qid){
+  const q = state.quests.find(x => x.id === qid);
+  if(!q) return;
+  const mins = parseDuration(q.name);
+  if(!mins) return;
+  state.timer = { qid, mins, endsAt: Date.now() + mins * 60000 };
+  save(); initAudio();
+  clearInterval(timerInt);
+  timerInt = setInterval(tickTimer, 1000);
+  render();
+}
+function clearTimer(){
+  state.timer = null;
+  clearInterval(timerInt); timerInt = null;
+  save(); render();
+}
+function tickTimer(){
+  if(!state.timer){ clearInterval(timerInt); timerInt = null; return; }
+  const rem = state.timer.endsAt - Date.now();
+  if(rem <= 0){
+    clearInterval(timerInt); timerInt = null;
+    chime();
+    if(navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    renderTimerBar();
+  }else{
+    const el = document.getElementById("tb-time");
+    if(el) el.textContent = fmtRemain(rem);
+    const chip = document.getElementById("chip-time");
+    if(chip) chip.textContent = fmtRemain(rem);
+  }
+}
+function renderTimerBar(){
+  const bar = $("#timerbar");
+  const t = state.timer;
+  if(!t){ bar.className = ""; bar.innerHTML = ""; return; }
+  const q = state.quests.find(x => x.id === t.qid);
+  if(!q || completedNow(q)){ state.timer = null; save(); bar.className = ""; bar.innerHTML = ""; return; }
+  const rem = t.endsAt - Date.now();
+  if(rem <= 0){
+    bar.className = "on done";
+    bar.innerHTML = '<span class="tb-name">Time! ' + esc(q.name) + '</span>' +
+      '<button class="btn small" data-act="timer-complete">Complete +' + q.xp + '</button>' +
+      '<button class="icon-btn" data-act="timer-dismiss" aria-label="Dismiss timer">✕</button>';
+  }else{
+    bar.className = "on";
+    bar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>' +
+      '<span class="tb-name">' + esc(q.name) + '</span>' +
+      '<b class="tb-time num" id="tb-time">' + fmtRemain(rem) + '</b>' +
+      '<button class="icon-btn" data-act="timer-cancel" aria-label="Cancel timer">✕</button>';
+  }
+}
+
 /* ===== quest sheet (add / edit) ===== */
 let formAttr = "body", formType = "daily";
 function openSheet(id){
@@ -1288,11 +1488,33 @@ document.addEventListener("click", e => {
   if(act){
     const id = act.dataset.id;
     switch(act.dataset.act){
-      case "complete":   completeQuest(id); break;
+      case "complete": {
+        const tick = act.querySelector(".tick");
+        const r = (tick || act).getBoundingClientRect();
+        const q = completeQuest(id);
+        if(q) sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        break;
+      }
       case "uncomplete": uncompleteQuest(id); break;
+      case "timer":
+        if(!(state.timer && state.timer.qid === id && state.timer.endsAt > Date.now())) startTimer(id);
+        break;
+      case "timer-cancel":  clearTimer(); break;
+      case "timer-dismiss": clearTimer(); break;
+      case "timer-complete": {
+        const qid = state.timer && state.timer.qid;
+        const r = act.getBoundingClientRect();
+        const q = qid && completeQuest(qid);
+        if(q) sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        break;
+      }
       case "accept-offer": acceptOffer(+act.dataset.slot); break;
       case "reroll-offer": rerollOffer(+act.dataset.slot); break;
-      case "redeem":      redeemReward(id); break;
+      case "redeem": {
+        const r = act.getBoundingClientRect();
+        if(redeemReward(id)) coinFountain(r.left + r.width / 2, r.top + r.height / 2);
+        break;
+      }
       case "new-reward":  openRewardModal(null); break;
       case "edit-reward": openRewardModal(id); break;
       case "del-reward":
@@ -1376,6 +1598,9 @@ state = load();
 save();   // persist any migration applied during load
 render();
 initCalendar();
+if(state.timer && state.timer.endsAt > Date.now()){
+  timerInt = setInterval(tickTimer, 1000);   // resume a timer that was running when the app closed
+}
 setTimeout(() => {
   $("#boot").classList.add("gone");
   $("#app").style.display = "";
