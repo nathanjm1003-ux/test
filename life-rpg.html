@@ -197,6 +197,7 @@
     border-radius:10px; padding:9px 14px; border:1px solid var(--crimson-strong);
   }
   .btn.ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); font-weight:500; }
+  .btn.ghost.arm{ background:#8B3325; color:#F6EFDC; border-color:#8B3325; }
   .mq{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow); }
   .mq .q-name{ white-space:normal; line-height:1.25; }
   .mq .q-main{ flex:1; min-width:0; }
@@ -224,6 +225,36 @@
   .tab{ flex:1; max-width:150px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:5px 0; border-radius:10px; color:var(--faint); font-size:11px; font-weight:600; letter-spacing:.04em; }
   .tab svg{ width:21px; height:21px; }
   .tab.on{ color:var(--accent-strong); }
+
+  /* ---------- boss battles ---------- */
+  .sect-add{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--crimson); font-weight:700;
+    border:1px solid color-mix(in srgb, var(--crimson) 40%, transparent); border-radius:99px; padding:2px 10px; }
+  .boss{ display:flex; gap:12px; width:100%; text-align:left; align-items:flex-start; position:relative;
+    background:color-mix(in srgb, var(--crimson) 7%, var(--surface));
+    border:1px solid color-mix(in srgb, var(--crimson) 45%, var(--line));
+    border-radius:14px; padding:14px; box-shadow:var(--shadow); }
+  .boss:active{ transform:scale(.985); }
+  .boss-ic{ flex:none; width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--crimson) 16%, transparent); color:var(--crimson);
+    border:1px solid color-mix(in srgb, var(--crimson) 40%, transparent); }
+  .boss-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .boss-name{ font-weight:700; font-size:17px;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .hpbar{ height:10px; border-radius:99px; background:var(--line-soft); overflow:hidden; }
+  .hpbar i{ display:block; height:100%; border-radius:99px; transition:width .5s ease;
+    background:linear-gradient(90deg, var(--crimson-strong), var(--crimson)); }
+  .hp-text{ font-size:12px; color:var(--muted); }
+  .dmgfloat{ position:absolute; right:16px; top:6px; font-weight:800; font-size:18px; pointer-events:none;
+    color:var(--crimson); font-family:ui-monospace, Menlo, monospace; animation:dmgUp .9s ease-out forwards; }
+  @keyframes dmgUp{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(-30px); } }
+  #victory{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:var(--overlay); }
+  #victory.on{ display:flex; animation:fadeIn .25s ease; }
+  .v-card{ border-color:var(--crimson); }
+  .v-card .lu-eyebrow{ color:var(--crimson); }
+  .v-name{ font-size:32px; line-height:1.1; margin:8px 0 6px; text-wrap:balance; }
+  .v-bonus{ color:var(--accent-strong); font-weight:700; }
+  #app.shake{ animation:appShake .5s ease; }
+  @keyframes appShake{ 10%,50%,90%{ transform:translateX(-3px); } 30%,70%{ transform:translateX(3px); } }
 
   /* ---------- achievements ---------- */
   .badges{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
@@ -294,8 +325,8 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal, #packmodal, #rewardmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on, #packmodal.on, #rewardmodal.on{ display:flex; }
+  #modal, #packmodal, #rewardmodal, #bossmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on{ display:flex; }
   .sheet{
     width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
     border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
@@ -395,6 +426,42 @@
   </div>
 </div>
 
+<div id="victory">
+  <div class="lu-card v-card">
+    <div class="lu-eyebrow">Boss vanquished</div>
+    <div class="v-name serif" id="v-name"></div>
+    <div class="v-bonus num" id="v-bonus"></div>
+  </div>
+</div>
+
+<div id="bossmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="boss-title">
+    <h2 id="boss-title">Challenge a boss</h2>
+    <div>
+      <label class="f-label" for="b-name">Name the foe (your big goal)</label>
+      <input class="f-input" id="b-name" type="text" maxlength="60" placeholder="e.g. The Unwritten Application" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Struck by quests of</span>
+      <div class="chips" id="b-attr"></div>
+    </div>
+    <div>
+      <label class="f-label" for="b-hp">Might (HP)</label>
+      <input class="f-input num" id="b-hp" type="number" min="100" max="5000" step="50" inputmode="numeric">
+      <div class="xp-quick">
+        <button class="chip" data-might="300">Lesser · 300</button>
+        <button class="chip" data-might="600">Fearsome · 600</button>
+        <button class="chip" data-might="1200">Legendary · 1200</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="b-cancel">Cancel</button>
+      <button class="btn ghost" id="b-delete" style="display:none">Abandon</button>
+      <button class="btn" id="b-save">To battle</button>
+    </div>
+  </div>
+</div>
+
 <div id="rewardmodal">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reward-title">
     <h2 id="reward-title">New reward</h2>
@@ -471,14 +538,19 @@ function defaultRewards(){
 function mkReward(name, cost){
   return { id: "r" + Math.random().toString(36).slice(2,9) + Date.now().toString(36), name, cost };
 }
+function mkBoss(name, attr, hp){
+  return { id: "b" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
+           name, attr, hp, maxHp: hp, created: Date.now(), defeated: null };
+}
 
 function defaultState(){
   return {
     xp: 0,
     gold: 0,
-    stats: { done:0, redeems:0, timer:0 },
+    stats: { done:0, redeems:0, timer:0, bosses:0 },
     badges: {},
     rewards: defaultRewards(),
+    bosses: [ mkBoss("The Orientation Application", "grind", 300) ],
     attrs: { body:0, mind:0, grind:0, craft:0, social:0 },
     quests: [
       mkQuest("Move for 30 minutes", "body", 30, "daily"),
@@ -512,6 +584,8 @@ function load(){
           timer: 0,
         };
         if(!s.badges) s.badges = {};
+        if(typeof s.stats.bosses !== "number") s.stats.bosses = 0;
+        if(!Array.isArray(s.bosses)) s.bosses = [ mkBoss("The Orientation Application", "grind", 300) ];
         return s;
       }
     }
@@ -851,6 +925,8 @@ const BADGES = [
   { id:"guild",   ic:"shield",    name:"Guild Favorite",       desc:"Accept 10 quest board offers",          check:s => Object.values(s.learn.slot).reduce((t, x) => t + (x.a || 0), 0) >= 10 },
   { id:"xp1k",    ic:"hourglass", name:"Seasoned",             desc:"Earn 1,000 lifetime XP",                check:s => s.xp >= 1000 },
   { id:"clock",   ic:"hourglass", name:"Timekeeper",           desc:"Finish 5 quests by timer",              check:s => (s.stats.timer || 0) >= 5 },
+  { id:"slayer",  ic:"sword",     name:"Slayer",               desc:"Vanquish your first boss",              check:s => (s.stats.bosses || 0) >= 1 },
+  { id:"giants",  ic:"crown",     name:"Giant Slayer",         desc:"Vanquish 3 bosses",                     check:s => (s.stats.bosses || 0) >= 3 },
 ];
 function checkAchievements(){
   const earned = [];
@@ -899,6 +975,22 @@ function completeQuest(id){
   state.stats.done++;
   if(q.src) LT(q.src).c++;
 
+  /* strike bosses of this attribute; defeat pays a bonus scaled to might */
+  const struck = [], victories = [];
+  for(const b of state.bosses){
+    if(b.defeated || b.attr !== q.attr) continue;
+    b.hp = Math.max(0, b.hp - q.xp);
+    struck.push({ id: b.id, dmg: q.xp });
+    if(b.hp === 0){
+      b.defeated = Date.now();
+      state.stats.bosses++;
+      const bonusXp = Math.max(5, Math.round(b.maxHp * 0.2 / 5) * 5);
+      const bonusGold = Math.max(5, Math.round(b.maxHp * 0.4 / 5) * 5);
+      state.xp += bonusXp; state.attrs[b.attr] += bonusXp; state.gold += bonusGold;
+      victories.push({ boss: b, bonusXp, bonusGold });
+    }
+  }
+
   const afterChar = levelInfo(state.xp, charNeed).level;
   const afterAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
 
@@ -906,6 +998,9 @@ function completeQuest(id){
   if(afterChar > beforeChar) entry.cu = afterChar;
   if(afterAttr > beforeAttr) entry.au = afterAttr;
   state.history.unshift(entry);
+  for(const v of victories){
+    state.history.unshift({ ts: Date.now(), day: tk, type:"boss", name: v.boss.name, attr: v.boss.attr, xp: v.bonusXp, gold: v.bonusGold });
+  }
   if(state.history.length > 600) state.history.length = 600;
 
   if(state.timer && state.timer.qid === q.id){ state.timer = null; clearInterval(timerInt); timerInt = null; }
@@ -914,7 +1009,10 @@ function completeQuest(id){
 
   save(); render();
 
-  if(afterChar > beforeChar){
+  if(victories.length){
+    bossVictory(victories[0]);
+    if(afterChar > beforeChar) setTimeout(() => showLevelUp(afterChar, null, 0), 3800);
+  }else if(afterChar > beforeChar){
     showLevelUp(afterChar, afterAttr > beforeAttr ? q.attr : null, afterAttr);
   }else{
     let sub = ATTRS[q.attr].name;
@@ -924,6 +1022,7 @@ function completeQuest(id){
     showToast("+" + q.xp + " XP", sub, q.attr, id);
   }
   announceBadges(checkAchievements(), 1700);
+  for(const st of struck) spawnDamage(st.id, st.dmg);   // after every re-render, or the float is wiped
   return q;
 }
 
@@ -940,6 +1039,9 @@ function uncompleteQuest(id){
   state.gold = Math.max(0, state.gold - q.xp);
   state.stats.done = Math.max(0, state.stats.done - 1);
   state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
+  for(const b of state.bosses){   // heal active bosses; a defeat already claimed stays won
+    if(!b.defeated && b.attr === q.attr) b.hp = Math.min(b.maxHp, b.hp + q.xp);
+  }
   if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
 
   const i = state.history.findIndex(h => h.qid === id && h.day === todayKey());
@@ -1044,6 +1146,24 @@ function renderToday(){
     html += '<div class="cal cal-err">' + esc(calInfo.msg) + '</div>';
   }
   html += charCardHTML();
+
+  const activeBosses = state.bosses.filter(b => !b.defeated);
+  html += '<div class="sect"><div class="sect-label"><span>Boss battles</span><button class="sect-add" data-act="boss-new">+ Challenge</button></div>';
+  if(!activeBosses.length){
+    html += '<div class="empty">No boss stands against you. Challenge one — a big goal with a health bar.</div>';
+  }else{
+    html += activeBosses.map(b => {
+      const pct = Math.round((b.hp / b.maxHp) * 100);
+      return '<button class="boss" data-act="boss-edit" data-id="' + b.id + '" data-bosscard="' + b.id + '">' +
+        '<span class="boss-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4L4 20M6.5 2.5L4 4l2.5 1.5M17.5 2.5L20 4l-2.5 1.5M4 17l3 3M20 17l-3 3"/></svg></span>' +
+        '<span class="boss-main"><span class="boss-name">' + esc(b.name) + '</span>' +
+        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[b.attr].color + '"></span> ' + ATTRS[b.attr].name + ' quests strike this foe</span>' +
+        '<span class="hpbar"><i style="width:' + pct + '%"></i></span>' +
+        '<span class="hp-text num">' + b.hp + ' / ' + b.maxHp + ' HP</span></span></button>';
+    }).join("");
+  }
+  html += '</div>';
+
   html += '<div class="sect"><div class="sect-label"><span>Due today</span><span>' + due.length + ' open</span></div>';
   html += due.length ? due.map(questRowHTML).join("")
         : '<div class="empty">All clear, ' + titleFor(levelInfo(state.xp, charNeed).level) + '. Every quest is done.</div>';
@@ -1127,6 +1247,12 @@ function renderHistory(){
         parts.push('<div class="day-label">' + label + '</div>');
       }
       const t = new Date(h.ts).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+      if(h.type === "boss"){
+        parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
+          '<span class="h-main">' + esc(h.name) + '<small>Boss vanquished</small></span>' +
+          '<span class="h-xp num" style="color:var(--crimson)">+' + h.xp + ' XP · +' + h.gold + 'g</span></div>');
+        continue;
+      }
       if(h.type === "redeem"){
         parts.push('<div class="h-item"><span class="h-time num">' + t + '</span>' +
           '<span class="h-main">' + esc(h.name) + '<small>Reward claimed</small></span>' +
@@ -1274,6 +1400,74 @@ function importPack(txt){
   state.board = null;
   save(); render();
   return null;
+}
+
+/* ===== boss battles ===== */
+let victoryTimer = null;
+let editingBossId = null, bossAttr = "grind";
+function spawnDamage(bossId, dmg){
+  if(!motionOK()) return;
+  const el = document.querySelector('[data-bosscard="' + bossId + '"]');
+  if(!el) return;
+  const s = document.createElement("span");
+  s.className = "dmgfloat";
+  s.textContent = "−" + dmg;
+  el.appendChild(s);
+  setTimeout(() => s.remove(), 950);
+}
+function bossVictory(v){
+  $("#v-name").textContent = v.boss.name;
+  $("#v-bonus").textContent = "+" + v.bonusXp + " XP · +" + v.bonusGold + " gold";
+  $("#victory").classList.add("on");
+  const app = document.getElementById("app");
+  app.classList.add("shake");
+  setTimeout(() => app.classList.remove("shake"), 600);
+  const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+  sparkBurst(cx, cy, "#A63D2E");
+  setTimeout(() => sparkBurst(cx * 0.7, cy * 0.85, "#D9A94E"), 150);
+  setTimeout(() => sparkBurst(cx * 1.3, cy * 0.9, "#E9BE68"), 300);
+  setTimeout(() => coinFountain(cx, cy), 350);
+  clearTimeout(victoryTimer);
+  victoryTimer = setTimeout(hideVictory, 3700);
+}
+function hideVictory(){ $("#victory").classList.remove("on"); clearTimeout(victoryTimer); }
+function openBossModal(id){
+  editingBossId = id || null;
+  const b = id ? state.bosses.find(x => x.id === id) : null;
+  $("#boss-title").textContent = b ? "Edit boss" : "Challenge a boss";
+  $("#b-name").value = b ? b.name : "";
+  $("#b-hp").value = b ? b.maxHp : 300;
+  bossAttr = b ? b.attr : "grind";
+  paintBossModal();
+  const del = $("#b-delete");
+  del.style.display = b ? "" : "none";
+  del.classList.remove("arm"); del.textContent = "Abandon";
+  $("#bossmodal").classList.add("on");
+  if(!b) setTimeout(() => $("#b-name").focus(), 120);
+}
+function paintBossModal(){
+  $("#b-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === bossAttr ? " on" : "") + '" data-battr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+}
+function closeBossModal(){ $("#bossmodal").classList.remove("on"); editingBossId = null; }
+function saveBossModal(){
+  const name = $("#b-name").value.trim();
+  if(!name){ $("#b-name").focus(); return; }
+  let hp = parseInt($("#b-hp").value, 10);
+  if(!Number.isFinite(hp)) hp = 300;
+  hp = Math.max(100, Math.min(5000, Math.round(hp / 50) * 50));
+  if(editingBossId){
+    const b = state.bosses.find(x => x.id === editingBossId);
+    if(b){
+      const dmg = b.maxHp - b.hp;
+      b.name = name; b.attr = bossAttr;
+      if(hp !== b.maxHp){ b.maxHp = hp; b.hp = Math.max(1, hp - dmg); }
+    }
+  }else{
+    state.bosses.push(mkBoss(name, bossAttr, hp));
+  }
+  save(); render(); closeBossModal();
 }
 
 /* ===== rewards ===== */
@@ -1638,6 +1832,8 @@ document.addEventListener("click", e => {
           }, 2600);
         }
         break;
+      case "boss-new":  openBossModal(null); break;
+      case "boss-edit": openBossModal(id); break;
       case "import-pack": openPackModal(); break;
       case "reset-pack":
         if(act.classList.contains("arm")){
@@ -1688,12 +1884,30 @@ document.addEventListener("click", e => {
   if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
   if(e.target.id === "r-save"){ saveRewardModal(); return; }
   if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  if(e.target.id === "b-save"){ saveBossModal(); return; }
+  if(e.target.id === "b-cancel" || e.target.id === "bossmodal"){ closeBossModal(); return; }
+  if(e.target.id === "b-delete"){
+    const del = e.target;
+    if(del.classList.contains("arm")){
+      state.bosses = state.bosses.filter(x => x.id !== editingBossId);
+      save(); render(); closeBossModal();
+    }else{
+      del.classList.add("arm"); del.textContent = "Abandon?";
+      setTimeout(() => { del.classList.remove("arm"); del.textContent = "Abandon"; }, 2600);
+    }
+    return;
+  }
+  const battr = e.target.closest("[data-battr]");
+  if(battr){ bossAttr = battr.dataset.battr; paintBossModal(); return; }
+  const might = e.target.closest("[data-might]");
+  if(might){ $("#b-hp").value = might.dataset.might; return; }
+  if(e.target.closest("#victory")){ hideVictory(); return; }
   const rc = e.target.closest("[data-rcost]");
   if(rc){ $("#r-cost").value = rc.dataset.rcost; return; }
   if(e.target.closest("#levelup")){ hideLevelUp(); return; }
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); hideLevelUp(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); hideLevelUp(); hideVictory(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
