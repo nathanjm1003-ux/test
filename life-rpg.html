@@ -143,6 +143,20 @@
   .offer-accepted-note{ font-size:13px; color:var(--muted); }
   .offer .icon-btn{ width:30px; height:30px; }
 
+  /* ---------- calendar strip ---------- */
+  .cal{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  .cal-row b{ color:var(--text); font-weight:600; margin-right:6px; }
+  .cal-busy{ color:var(--accent-strong); font-weight:700; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+  .cal.cal-err{ font-size:12px; border-style:dashed; }
+
+  /* ---------- quest pack ---------- */
+  .icon-btn.wide{ width:auto; padding:0 12px; font-size:13px; }
+  .icon-btn.wide.arm{ background:#B3432E; border-color:#B3432E; color:#fff; }
+  .pack-hint{ margin:0; font-size:13px; color:var(--muted); }
+  .pack-ex{ margin:0; font-size:11px; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:8px 10px; overflow-x:auto; color:var(--muted); }
+  .pack-err{ margin:0; font-size:13px; color:#C24A33; min-height:1em; }
+  textarea.f-input{ resize:vertical; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; line-height:1.5; }
+
   /* ---------- quests manage ---------- */
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px;
@@ -207,8 +221,8 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on{ display:flex; }
+  #modal, #packmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on{ display:flex; }
   .sheet{
     width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
     border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
@@ -299,6 +313,22 @@
   </div>
 </div>
 
+<div id="packmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pack-title">
+    <h2 id="pack-title">Import quest pack</h2>
+    <p class="pack-hint">Paste a pack as JSON — ask Claude to write one from your goals. Importing replaces the current pack; the board relearns your tastes from scratch.</p>
+    <pre class="pack-ex">{"name":"My pack","lib":{"craft":[
+  {"t":["easy version","medium","hard"],"habit":true}
+]}}</pre>
+    <textarea id="pack-text" class="f-input" rows="7" spellcheck="false" placeholder="Paste pack JSON here"></textarea>
+    <p class="pack-err" id="pack-err"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="pack-cancel">Cancel</button>
+      <button class="btn" id="pack-save">Import pack</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
 "use strict";
@@ -320,6 +350,8 @@ const attrNeed = l => 60 + (l-1)*30;
 
 /* ===== state ===== */
 let state = null;
+let dayCtx = null;                       // today's calendar context, memory-only
+let calInfo = { status:"off", msg:"" };  // off | loading | on | err
 let currentTab = "today";
 let editingId = null;          // quest being edited in the sheet, or null for new
 let toastTimer = null;
@@ -340,9 +372,9 @@ function defaultState(){
     history: [],
   };
 }
-function mkQuest(name, attr, xp, type){
+function mkQuest(name, attr, xp, type, src){
   return { id: "q" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
-           name, attr, xp, type, streak:0, lastDone:null, lastWeek:null, done:false, prev:null };
+           name, attr, xp, type, streak:0, lastDone:null, lastWeek:null, done:false, prev:null, src: src || null };
 }
 
 function load(){
@@ -350,10 +382,17 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){
       const s = JSON.parse(raw);
-      if(s && typeof s.xp === "number" && s.attrs && Array.isArray(s.quests)) return s;
+      if(s && typeof s.xp === "number" && s.attrs && Array.isArray(s.quests)){
+        if(!s.learn || !s.learn.tpl) s.learn = { tpl:{}, slot:{} };
+        if(!("pack" in s)) s.pack = null;
+        return s;
+      }
     }
   }catch(e){ /* corrupted or unavailable storage: start fresh */ }
-  return defaultState();
+  const s = defaultState();
+  s.learn = { tpl:{}, slot:{} };
+  s.pack = null;
+  return s;
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ /* storage full/unavailable */ }
@@ -437,6 +476,71 @@ const QLIB = {
   ],
 };
 
+/* Built-in personalized pack. Replaceable via Import on the Quests screen. */
+const DEFAULT_PACK = { name:"Nathan's Pack", lib:{
+  body: [
+    { t:["Take Charlie out for 15 minutes","Take Charlie for a proper 30-minute walk","Long walk, hike, or a kayak trip"], habit:1 },
+    { t:["Stretch for 5 minutes after your shift","Do a 15-minute post-shift workout","Do a full workout on a day off"], habit:1 },
+    { t:["Wind down by 8:30 before an early shift","Screens off 30 minutes before bed","Full sleep reset — phone out of the bedroom tonight"] },
+    { t:["Drink water through your whole shift","Get outside for 15 minutes of daylight","Hit 10,000 steps today"] },
+    { t:["Take a walk somewhere green","Walk the falls or a favorite spot","Plan and do a real outdoor adventure"] },
+  ],
+  mind: [
+    { t:["Listen to 20 minutes of your audiobook","Listen to a full chapter — no phone, just the book","A long audiobook session on a walk"], habit:1 },
+    { t:["Read 10 pages","Read 25 pages","Read 50 pages"], habit:1 },
+    { t:["15 minutes on your Exploring Christianity reading","Write down one honest question and sit with it","A full reading + journal session on the big questions"] },
+    { t:["Watch one neuroscience video","Read a neuro article and note 3 takeaways","Deep-dive a neuroscience topic for an hour"] },
+    { t:["Journal one paragraph about today","Journal properly for 15 minutes","Write a full weekly reflection"], habit:1 },
+  ],
+  grind: [
+    { t:["Prep clothes and bag for tomorrow's shift","Plan your week around your shifts","Do a full weekly review and plan"] },
+    { t:["15 minutes on the orientation leader application","Draft a full application answer","Finish and submit the application"] },
+    { t:["Knock out one USC prep item","Clear three USC prep items (forms, supplies, lists)","Finish a whole USC prep category"] },
+    { t:["Log today's spending","Review the week's budget","Set up your USC semester budget"] },
+    { t:["Do the one errand you keep putting off","Clear your errand list for the week","Deep-clean and organize your space"] },
+  ],
+  craft: [
+    { t:["Practice trombone for 10 minutes — phone stays down","Practice trombone for 25 minutes","A full 45-minute trombone session"], habit:1 },
+    { t:["Fold one origami piece","Fold a design you haven't tried","Fold a hard design start to finish"], habit:1 },
+    { t:["Prep one thing for the next Cosmere session","Write a page of session notes or ideas","Build something substantial for the campaign"] },
+    { t:["Create anything for 15 minutes","Put 30 focused minutes into a creative project","A 60-minute deep creative session"] },
+  ],
+  social: [
+    { t:["Send Lizzie a message that isn't just \"hey\"","Plan a proper date with Lizzie","Plan something special for Lizzie"], habit:1 },
+    { t:["Check in with Mom","Do something with Mom this week","Plan a full day with Mom before school starts"] },
+    { t:["Message Ellie, Skyler, or Madelyn","Set up a hangout with the orientation crew","Organize a group hangout before the semester"] },
+    { t:["Text the Browns to see how Pennsylvania is treating them","Call Lindsay","Write someone a real letter or long message"] },
+    { t:["Ask a coworker how they're really doing","Hang out with a friend this week","Host or organize a get-together"] },
+  ],
+}};
+
+/* learning stats: per-template accepts/rerolls/completions, per-slot offer history */
+function LT(key){ return state.learn.tpl[key] || (state.learn.tpl[key] = { a:0, r:0, c:0 }); }
+function LS(i){ return state.learn.slot[i] || (state.learn.slot[i] = { o:0, a:0, r:0 }); }
+
+function activeLib(attr){
+  const packLib = (state.pack && state.pack.lib) || DEFAULT_PACK.lib;
+  const out = [];
+  (packLib[attr] || []).forEach((tpl, i) => out.push({ tpl, key:"p:" + attr + ":" + i, pack:true }));
+  (QLIB[attr] || []).forEach((tpl, i) => out.push({ tpl, key:"g:" + attr + ":" + i, pack:false }));
+  return out;
+}
+function tplWeight(e){
+  const st = state.learn.tpl[e.key];
+  let w = e.pack ? 1.5 : 1;
+  if(st) w = w + 0.6*(st.a||0) + 0.9*(st.c||0) - 0.45*(st.r||0);
+  return Math.min(5, Math.max(0.15, w));
+}
+/* -1 on historically weak days of the week, +1 on strong ones */
+function dayStrength(){
+  const counts = [0,0,0,0,0,0,0];
+  let total = 0;
+  for(const h of state.history){ counts[new Date(h.ts).getDay()]++; total++; }
+  if(total < 12) return 0;
+  const avg = total / 7, c = counts[new Date().getDay()];
+  return c < avg * 0.6 ? -1 : c > avg * 1.4 ? 1 : 0;
+}
+
 function hashStr(s){
   let h = 2166136261;
   for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -483,61 +587,87 @@ function offerXp(tier, mult, r){
   return Math.max(10, Math.round((base * mult + (r() * 14 - 7)) / 5) * 5);
 }
 function pickTemplate(r, attr, tier, taken, habitOnly){
-  const pool = QLIB[attr].filter(t => !habitOnly || t.habit);
   const names = new Set([...state.quests.map(q => q.name), ...taken]);
-  for(let i = 0; i < 12; i++){
-    const tpl = pool[(r() * pool.length) | 0];
-    if(!tpl.t.some(v => names.has(v))) return tpl.t[tier];
-  }
-  return pool[(r() * pool.length) | 0].t[tier];
+  let pool = activeLib(attr).filter(e => (!habitOnly || e.tpl.habit) && !e.tpl.t.some(v => names.has(v)));
+  if(!pool.length) pool = activeLib(attr).filter(e => !habitOnly || e.tpl.habit);
+  if(!pool.length) pool = activeLib(attr);
+  const total = pool.reduce((s, e) => s + tplWeight(e), 0);
+  let x = r() * total;
+  let e = pool[pool.length - 1];
+  for(const cand of pool){ x -= tplWeight(cand); if(x <= 0){ e = cand; break; } }
+  const t = Math.min(tier, e.tpl.t.length - 1);
+  return { name: e.tpl.t[t], key: e.key };
 }
 
 function genOffer(slot, bump, taken){
   const r = mulberry32(hashStr(todayKey() + "#" + slot + "#" + bump));
   const a = analyzeState();
+  const ds = dayStrength();
+  const lighten = (dayCtx && dayCtx.busy ? 1 : 0) + (ds < 0 ? 1 : 0);
+  const busyNote = o => { if(dayCtx && dayCtx.busy) o.reason += " · kept light for a busy day"; return o; };
+  const mk = (attr, type, tier, mult, reason) => {
+    const p = pickTemplate(r, attr, tier, taken, type === "daily");
+    return { attr, type, tier, accepted:false, bump, key:p.key, name:p.name, xp:offerXp(tier, mult, r), reason };
+  };
+  const anyKey = () => Object.keys(ATTRS)[(r() * 5) | 0];   // fresh save: every attr is tied
   if(slot === 0){
-    const attr = a.neglected, tier = tierFor(attr);
-    return { attr, type:"oneoff", tier, accepted:false, bump,
-      name: pickTemplate(r, attr, tier, taken),
-      xp: offerXp(tier, 1.25, r),
-      reason: ATTRS[attr].name + " is falling behind · bonus XP" };
+    const attr = state.xp === 0 ? anyKey() : a.neglected;
+    const tier = Math.max(0, tierFor(attr) - lighten);
+    const reason = state.xp === 0 ? "A place to start" : ATTRS[attr].name + " is falling behind · bonus XP";
+    return busyNote(mk(attr, "oneoff", tier, 1.25, reason));
   }
   if(slot === 1){
     if(a.broken){
-      const attr = a.broken.attr, tier = tierFor(attr);
-      return { attr, type:"oneoff", tier, accepted:false, bump,
-        name: pickTemplate(r, attr, tier, taken),
-        xp: offerXp(tier, 1.25, r),
-        reason: "Win back your " + ATTRS[attr].name + " momentum" };
+      const attr = a.broken.attr, tier = Math.max(0, tierFor(attr) - lighten);
+      return busyNote(mk(attr, "oneoff", tier, 1.25, "Win back your " + ATTRS[attr].name + " momentum"));
+    }
+    if(dayCtx && dayCtx.fitness){
+      const tier = Math.max(0, tierFor("body") - lighten);
+      return mk("body", "oneoff", tier, 1.15, "Training is on your calendar — stack a Body win");
     }
     const keys = Object.keys(ATTRS);
-    const attr = keys[(r() * keys.length) | 0], tier = tierFor(attr);
-    return { attr, type:"daily", tier, accepted:false, bump,
-      name: pickTemplate(r, attr, tier, taken, true),
-      xp: offerXp(tier, 1, r),
-      reason: "A new habit to forge" };
+    const attr = keys[(r() * keys.length) | 0];
+    const tier = Math.max(0, tierFor(attr) - lighten);
+    return busyNote(mk(attr, "daily", tier, 1, "A new habit to forge"));
   }
-  const attr = a.best, tier = Math.min(2, tierFor(attr) + 1);
-  return { attr, type:"oneoff", tier, accepted:false, bump,
-    name: pickTemplate(r, attr, tier, taken),
-    xp: offerXp(tier, 1.5, r),
-    reason: "A challenge for your strongest" };
+  const attr = state.xp === 0 ? anyKey() : a.best;
+  const s2 = state.learn.slot[2];
+  const shy = s2 && s2.o >= 6 && (s2.a || 0) / s2.o < 0.25 ? 1 : 0;   // challenges keep getting ignored -> ease off
+  const tier = Math.max(0, Math.min(2, tierFor(attr) + 1 - lighten - shy));
+  let reason = "A challenge for your strongest";
+  if(ds > 0) reason = "Your strong day — a worthy challenge";
+  if(ds < 0) reason = "A lighter trial for a quiet day";
+  return busyNote(mk(attr, "oneoff", tier, ds > 0 ? 1.6 : 1.5, reason));
 }
 
-function ensureBoard(){
-  if(state.board && state.board.day === todayKey()) return;
+function ctxSig(){
+  return todayKey() + (dayCtx ? "|b" + (dayCtx.busy ? 1 : 0) + "|f" + (dayCtx.fitness ? 1 : 0) : "|none");
+}
+function genSlots(prev){
   const taken = [];
-  const slots = [0, 1, 2].map(i => {
-    const o = genOffer(i, 0, taken);
+  return [0, 1, 2].map(i => {
+    const o = genOffer(i, prev ? (prev[i].bump || 0) : 0, taken);
     taken.push(o.name);
     return o;
   });
-  state.board = { day: todayKey(), slots };
+}
+function ensureBoard(){
+  if(state.board && state.board.day === todayKey()) return;
+  state.board = { day: todayKey(), sig: ctxSig(), slots: genSlots(null) };
+  [0, 1, 2].forEach(i => LS(i).o++);
+  save();
+}
+/* calendar context arrived (or changed): regenerate an untouched board to fit the day */
+function maybeAdaptBoard(){
+  if(!state.board || state.board.day !== todayKey() || state.board.sig === ctxSig()) return;
+  if(!state.board.slots.some(o => o.accepted)) state.board.slots = genSlots(state.board.slots);
+  state.board.sig = ctxSig();
   save();
 }
 function rerollOffer(i){
   const slots = state.board.slots;
   if(slots[i].accepted) return;
+  LS(i).r++; LT(slots[i].key).r++;
   const taken = slots.filter((_, j) => j !== i).map(o => o.name);
   slots[i] = genOffer(i, (slots[i].bump || 0) + 1, taken);
   save(); render();
@@ -545,7 +675,8 @@ function rerollOffer(i){
 function acceptOffer(i){
   const o = state.board.slots[i];
   if(o.accepted) return;
-  state.quests.push(mkQuest(o.name, o.attr, o.xp, o.type));
+  LS(i).a++; LT(o.key).a++;
+  state.quests.push(mkQuest(o.name, o.attr, o.xp, o.type, o.key));
   o.accepted = true;
   save(); render();
   showToast("Accepted", (o.type === "daily" ? "New daily quest — " : "Quest added — ") + o.name, o.attr, null);
@@ -574,6 +705,7 @@ function completeQuest(id){
 
   state.xp += q.xp;
   state.attrs[q.attr] += q.xp;
+  if(q.src) LT(q.src).c++;
 
   const afterChar = levelInfo(state.xp, charNeed).level;
   const afterAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
@@ -607,6 +739,7 @@ function uncompleteQuest(id){
 
   state.xp = Math.max(0, state.xp - q.xp);
   state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
+  if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
 
   const i = state.history.findIndex(h => h.qid === id && h.day === todayKey());
   if(i >= 0) state.history.splice(i, 1);
@@ -691,6 +824,16 @@ function renderToday(){
   const dateStr = new Date().toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
 
   let html = '<div class="screen-head"><h1 class="serif">Today</h1><span class="sub">' + dateStr + '</span></div>';
+  if(calInfo.status === "on" && dayCtx){
+    if(dayCtx.items.length){
+      const rows = dayCtx.items.slice(0, 3).map(i =>
+        '<span class="cal-row"><b class="num">' + esc(i.hm) + '</b>' + esc(i.title) + '</span>').join("");
+      const more = dayCtx.items.length > 3 ? '<span>+' + (dayCtx.items.length - 3) + ' more</span>' : '';
+      html += '<div class="cal">' + (dayCtx.busy ? '<span class="cal-busy">Busy day — offers kept light</span>' : '') + rows + more + '</div>';
+    }
+  }else if(calInfo.status === "err"){
+    html += '<div class="cal cal-err">' + esc(calInfo.msg) + '</div>';
+  }
   html += charCardHTML();
   html += '<div class="sect"><div class="sect-label"><span>Due today</span><span>' + due.length + ' open</span></div>';
   html += due.length ? due.map(questRowHTML).join("")
@@ -723,6 +866,13 @@ function renderToday(){
 
 function renderQuests(){
   let html = '<div class="screen-head"><h1 class="serif">Quests</h1><button class="btn" data-act="new">+ New quest</button></div>';
+  const packLib = (state.pack && state.pack.lib) || DEFAULT_PACK.lib;
+  const packName = state.pack ? state.pack.name : DEFAULT_PACK.name;
+  const packCount = Object.values(packLib).reduce((s, a) => s + a.length, 0);
+  html += '<div class="mq"><span class="q-main"><span class="q-name">' + esc(packName) + '</span>' +
+    '<span class="q-meta">' + packCount + ' quest templates power the board</span></span>' +
+    '<button class="icon-btn wide" data-act="import-pack">Import</button>' +
+    (state.pack ? '<button class="icon-btn wide danger" data-act="reset-pack">Reset</button>' : '') + '</div>';
   for(const type of ["daily","weekly","oneoff"]){
     const list = state.quests.filter(q => q.type === type);
     if(!list.length) continue;
@@ -779,6 +929,102 @@ function render(){
   document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
   $("#view-" + currentTab).classList.add("on");
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === currentTab));
+}
+
+/* ===== calendar (artifact mcp capability; degrades to nothing) ===== */
+function isoLocal(d){
+  const off = -d.getTimezoneOffset();
+  const sgn = off >= 0 ? "+" : "-";
+  const p = n => String(Math.abs(n)).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) +
+         "T" + p(d.getHours()) + ":" + p(d.getMinutes()) + ":00" +
+         sgn + p(Math.floor(Math.abs(off) / 60)) + ":" + p(Math.abs(off) % 60);
+}
+function initCalendar(){
+  if(!window.claude || window.claude.mcp === undefined) return;
+  const s0 = new Date(); s0.setHours(0, 0, 0, 0);
+  const e0 = new Date(s0); e0.setDate(e0.getDate() + 1);
+  calInfo = { status:"loading", msg:"" };
+  try{
+    window.claude.mcp.watchTool("Google Calendar", "list_events",
+      { startTime: isoLocal(s0), endTime: isoLocal(e0), orderBy: "startTime", pageSize: 25 },
+      onCalEvent,
+      { cache: { staleTime: 60000 }, refetchInterval: 900000 });
+  }catch(e){ calInfo = { status:"off", msg:"" }; }
+}
+function onCalEvent(ev){
+  if(ev.type === "data"){
+    const p = ev.result && ev.result.payload;
+    const evs = (p && Array.isArray(p.events) ? p.events : []).filter(e =>
+      e && e.status !== "cancelled" && e.start && e.start.dateTime);
+    const items = evs.map(e => {
+      const st = new Date(e.start.dateTime);
+      const en = e.end && e.end.dateTime ? new Date(e.end.dateTime) : null;
+      return { title: e.summary || "(untitled)",
+               hm: st.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" }),
+               h: en ? Math.max(0, (en - st) / 3600000) : 0 };
+    });
+    const busyH = items.reduce((s, i) => s + i.h, 0);
+    dayCtx = { items, busyH,
+               busy: busyH >= 4 || items.length >= 4,
+               fitness: items.some(i => /gym|work ?out|\brun\b|lift|yoga|swim|hike|climb|training/i.test(i.title)) };
+    calInfo = { status:"on", msg:"" };
+    maybeAdaptBoard();
+    render();
+    return;
+  }
+  const c = ev.error && ev.error.code;
+  if(c === "needs_reauth"){
+    dayCtx = null;
+    calInfo = { status:"err", msg:"Reconnect Google Calendar in claude.ai Settings → Connectors to see your day here." };
+  }else if(c === "server_not_connected" || c === "selection_required"){
+    dayCtx = null;
+    calInfo = { status:"err", msg:"Add Google Calendar in claude.ai Settings → Connectors to see your day here." };
+  }else if(c === "blocked_by_policy" || c === "approval_required" || c === "not_granted" ||
+           c === "capability_disabled" || c === "capability_removed" || c === "not_in_manifest"){
+    dayCtx = null;
+    calInfo = { status:"off", msg:"" };
+  }else{
+    // transient (server_unavailable, upstream_error, ...): keep last-good data
+    if(calInfo.status === "loading") calInfo = { status:"off", msg:"" };
+    return;
+  }
+  render();
+}
+
+/* ===== quest pack import ===== */
+function openPackModal(){
+  $("#pack-text").value = "";
+  $("#pack-err").textContent = "";
+  $("#packmodal").classList.add("on");
+}
+function closePackModal(){ $("#packmodal").classList.remove("on"); }
+function importPack(txt){
+  let p;
+  try{ p = JSON.parse(txt); }catch(e){ return "That isn't valid JSON."; }
+  if(!p || typeof p !== "object" || !p.lib || typeof p.lib !== "object")
+    return 'Expected {"name": "...", "lib": {...}}.';
+  const lib = {};
+  let n = 0;
+  for(const k of Object.keys(ATTRS)){
+    if(!Array.isArray(p.lib[k])) continue;
+    const clean = [];
+    for(const tp of p.lib[k]){
+      if(tp && Array.isArray(tp.t) && tp.t.length && tp.t.every(s => typeof s === "string" && s.trim())){
+        const t = tp.t.slice(0, 3).map(s => s.trim().slice(0, 80));
+        while(t.length < 3) t.push(t[t.length - 1]);
+        clean.push(tp.habit ? { t, habit:1 } : { t });
+        n++;
+      }
+    }
+    if(clean.length) lib[k] = clean;
+  }
+  if(!n) return "No usable templates found — each needs a \"t\" array of 1-3 strings.";
+  state.pack = { name: typeof p.name === "string" && p.name.trim() ? p.name.trim().slice(0, 40) : "Custom pack", lib };
+  state.learn.tpl = {};   // template keys changed; relearn preferences
+  state.board = null;
+  save(); render();
+  return null;
 }
 
 /* ===== toast ===== */
@@ -885,6 +1131,19 @@ document.addEventListener("click", e => {
       case "uncomplete": uncompleteQuest(id); break;
       case "accept-offer": acceptOffer(+act.dataset.slot); break;
       case "reroll-offer": rerollOffer(+act.dataset.slot); break;
+      case "import-pack": openPackModal(); break;
+      case "reset-pack":
+        if(act.classList.contains("arm")){
+          state.pack = null; state.learn.tpl = {}; state.board = null;
+          save(); render();
+          showToast("Pack reset", "Back to " + DEFAULT_PACK.name, null, null);
+        }else{
+          act.classList.add("arm"); act.textContent = "Sure?";
+          setTimeout(() => {
+            if(document.body.contains(act)){ act.classList.remove("arm"); act.textContent = "Reset"; }
+          }, 2600);
+        }
+        break;
       case "new":        openSheet(null); break;
       case "edit":       openSheet(id); break;
       case "del":
@@ -913,10 +1172,17 @@ document.addEventListener("click", e => {
   if(e.target.id === "f-save"){ saveSheet(); return; }
   if(e.target.id === "f-cancel"){ closeSheet(); return; }
   if(e.target.id === "modal"){ closeSheet(); return; }
+  if(e.target.id === "pack-save"){
+    const err = importPack($("#pack-text").value);
+    if(err) $("#pack-err").textContent = err;
+    else { closePackModal(); showToast("Pack imported", state.pack.name + " now powers the board", null, null); }
+    return;
+  }
+  if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
   if(e.target.closest("#levelup")){ hideLevelUp(); return; }
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); hideLevelUp(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); hideLevelUp(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
@@ -926,6 +1192,7 @@ document.addEventListener("visibilitychange", () => { if(!document.hidden) rende
 /* ===== boot ===== */
 state = load();
 render();
+initCalendar();
 setTimeout(() => {
   $("#boot").classList.add("gone");
   $("#app").style.display = "";
