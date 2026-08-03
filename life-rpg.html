@@ -274,6 +274,36 @@
   #app.shake{ animation:appShake .5s ease; }
   @keyframes appShake{ 10%,50%,90%{ transform:translateX(-3px); } 30%,70%{ transform:translateX(3px); } }
 
+  /* ---------- perk tree ---------- */
+  .branch{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:0; }
+  .branch + .branch{ margin-top:10px; }
+  .branch-head{ display:flex; align-items:center; gap:10px; padding-bottom:8px; }
+  .branch-head .gem{ margin:0; }
+  .branch-name{ flex:1; font-weight:700; font-size:15px; font-variant:small-caps; letter-spacing:.05em; }
+  .branch-lvl{ font-size:12px; color:var(--muted); }
+  .perk{ display:flex; gap:11px; text-align:left; width:100%; padding:9px 0 9px 4px; position:relative; align-items:flex-start; }
+  .perk + .perk{ border-top:1px solid var(--line-soft); }
+  .perk::before{ content:""; position:absolute; left:18px; top:0; bottom:0; width:2px; background:var(--line-soft); }
+  .perk:first-of-type::before{ top:50%; }
+  .perk:last-child::before{ bottom:50%; }
+  .perk-ic{ position:relative; z-index:1; flex:none; width:30px; height:30px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; margin-left:4px;
+    border:2px solid var(--line); background:var(--surface); color:var(--faint); }
+  .perk.got .perk-ic{ border-color:var(--pcol); color:var(--pcol); background:color-mix(in srgb, var(--pcol) 14%, var(--surface)); }
+  .perk.ready .perk-ic{ border-color:var(--accent); color:var(--accent-strong); border-style:dashed; }
+  .perk-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .perk-name{ font-weight:700; font-size:14px; display:flex; gap:8px; align-items:baseline; }
+  .perk.locked .perk-name{ color:var(--muted); }
+  .perk-cost{ font-size:11px; color:var(--accent-strong); border:1px solid var(--accent); border-radius:99px; padding:0 6px; }
+  .perk-desc{ font-size:12px; color:var(--muted); line-height:1.35; }
+  .perk.locked .perk-desc{ opacity:.65; }
+  .perk-why{ font-size:11px; color:var(--faint); }
+  .perk-why.ready{ color:var(--accent-strong); font-weight:700; }
+  .tab svg{ width:21px; height:21px; }
+  #tabbar{ gap:0; }
+  .tab{ padding:5px 2px; font-size:10px; }
+
   /* ---------- achievements ---------- */
   .badges{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
   .badge{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px 8px;
@@ -343,8 +373,33 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on{ display:flex; }
+  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal, #campmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on, #campmodal.on{ display:flex; }
+  #campmodal .sheet{ max-height:92vh; overflow-y:auto; }
+
+  /* ---------- campaigns ---------- */
+  .camp{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:13px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:7px; }
+  .camp + .camp{ margin-top:8px; }
+  .camp-top{ display:flex; align-items:center; gap:10px; }
+  .camp-name{ flex:1; font-weight:700; font-size:16px; line-height:1.2;
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", "Book Antiqua", Georgia, serif; }
+  .camp .icon-btn{ width:28px; height:28px; font-size:12px; }
+  .camp .icon-btn.arm{ background:#B3432E; border-color:#B3432E; color:#fff; width:auto; padding:0 8px; font-size:11px; }
+  .phases{ list-style:none; margin:2px 0 0; padding:0; display:flex; flex-direction:column; gap:0; }
+  .phase{ display:flex; align-items:center; gap:9px; padding:5px 0 5px 3px; position:relative; font-size:13px; }
+  .phase::before{ content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--line-soft); }
+  .phase:first-child::before{ top:50%; }
+  .phase:last-child::before{ bottom:50%; }
+  .phase-dot{ position:relative; z-index:1; flex:none; width:9px; height:9px; border-radius:50%;
+    background:var(--surface); border:2px solid var(--line); margin-left:2px; }
+  .phase.done .phase-dot{ background:var(--crimson); border-color:var(--crimson); }
+  .phase.now .phase-dot{ border-color:var(--accent); background:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .phase-name{ flex:1; min-width:0; color:var(--muted); }
+  .phase.now .phase-name{ color:var(--text); font-weight:700; }
+  .phase.done .phase-name{ color:var(--faint); text-decoration:line-through; }
+  .phase-meta{ font-size:11px; color:var(--faint); white-space:nowrap; }
+  .phase.now .phase-meta{ color:var(--accent-strong); font-weight:700; }
   .sheet{
     width:100%; max-width:480px; background:var(--raised); border:1px solid var(--line); border-bottom:none;
     border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
@@ -374,6 +429,7 @@
 <div id="app" style="display:none">
   <main class="view" id="view-today" aria-label="Today"></main>
   <main class="view" id="view-quests" aria-label="Quests"></main>
+  <main class="view" id="view-perks" aria-label="Perks"></main>
   <main class="view" id="view-rewards" aria-label="Rewards"></main>
   <main class="view" id="view-history" aria-label="History"></main>
 </div>
@@ -386,6 +442,10 @@
   <button class="tab" data-tab="quests" aria-label="Quests">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
     Quests
+  </button>
+  <button class="tab" data-tab="perks" aria-label="Perks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9M12 9L7 5M12 9l5-4"/><circle cx="12" cy="22" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="4" r="2.4"/><circle cx="18" cy="4" r="2.4"/><circle cx="12" cy="12" r="2.4"/></svg>
+    Perks
   </button>
   <button class="tab" data-tab="rewards" aria-label="Rewards">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10l4 5-9 11L3 9l4-5z"/><path d="M3 9h18M12 20L8.5 9l2-5M12 20l3.5-11-2-5"/></svg>
@@ -451,6 +511,40 @@
     <div class="lu-eyebrow">Boss vanquished</div>
     <div class="v-name serif" id="v-name"></div>
     <div class="v-bonus num" id="v-bonus"></div>
+  </div>
+</div>
+
+<div id="campmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="camp-title">
+    <h2 id="camp-title">New campaign</h2>
+    <div>
+      <label class="f-label" for="c-name">The long goal</label>
+      <input class="f-input" id="c-name" type="text" maxlength="60" placeholder="e.g. Be gig-ready on trombone" autocomplete="off">
+    </div>
+    <div>
+      <span class="f-label">Branch</span>
+      <div class="chips" id="c-attr"></div>
+      <span class="f-label" style="margin-top:12px">Skill it trains</span>
+      <div class="chips" id="c-tag"></div>
+    </div>
+    <div>
+      <label class="f-label" for="c-end">Target date</label>
+      <input class="f-input" id="c-end" type="date">
+      <div class="xp-quick">
+        <button class="chip" data-weeks="4">1 month</button>
+        <button class="chip" data-weeks="12">3 months</button>
+        <button class="chip" data-weeks="26">6 months</button>
+      </div>
+    </div>
+    <div>
+      <label class="f-label" for="c-per">Sessions per week</label>
+      <input class="f-input num" id="c-per" type="number" min="1" max="14" step="1" inputmode="numeric">
+    </div>
+    <p class="pack-hint" id="c-preview"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="c-cancel">Cancel</button>
+      <button class="btn" id="c-save">Begin campaign</button>
+    </div>
   </div>
 </div>
 
@@ -652,6 +746,9 @@ function defaultState(){
     xp: 0,
     gold: 0,
     stats: { done:0, redeems:0, timer:0, bosses:0 },
+    perks: {},
+    shield: null,
+    campaigns: [],
     skills: DEFAULT_SKILLS(),
     badges: {},
     rewards: defaultRewards(),
@@ -691,6 +788,9 @@ function load(){
         };
         if(!s.badges) s.badges = {};
         if(typeof s.stats.bosses !== "number") s.stats.bosses = 0;
+        if(!s.perks) s.perks = {};
+        if(!("shield" in s)) s.shield = null;
+        if(!Array.isArray(s.campaigns)) s.campaigns = [];
         if(!Array.isArray(s.skills) || !s.skills.length) s.skills = DEFAULT_SKILLS();
         for(const sk of s.skills){ if(typeof sk.xp !== "number") sk.xp = 0; }
         if(!Array.isArray(s.bosses)) s.bosses = [ mkBoss("The Gym Rat", "lifting", 5) ];
@@ -967,7 +1067,7 @@ function ctxSig(){
 }
 function genSlots(prev){
   const taken = [];
-  return [0, 1, 2].map(i => {
+  return Array.from({ length: boardSlots() }, (_, i) => i).map(i => {
     const o = genOffer(i, prev ? (prev[i].bump || 0) : 0, taken);
     taken.push(o.name);
     return o;
@@ -976,7 +1076,7 @@ function genSlots(prev){
 function ensureBoard(){
   if(state.board && state.board.day === todayKey()) return;
   state.board = { day: todayKey(), sig: ctxSig(), slots: genSlots(null) };
-  [0, 1, 2].forEach(i => LS(i).o++);
+  state.board.slots.forEach((_, i) => LS(i).o++);
   save();
 }
 /* calendar context arrived (or changed): regenerate an untouched board to fit the day */
@@ -1003,6 +1103,91 @@ function acceptOffer(i){
   save(); render();
   showToast("Accepted", (o.type === "daily" ? "New daily quest — " : "Quest added — ") + o.name, o.attr, null);
   announceBadges(checkAchievements(), 1500);
+}
+
+/* ===== perk tree =====
+   Points: 1 per character level gained, 1 per boss vanquished. Spent totals are
+   derived from the owned set, so the pool is always self-consistent. */
+const PERKS = [
+  { id:"ironhabit", attr:"body",   tier:1, cost:1, req:2, ic:"shield", name:"Iron Habit",
+    desc:"+10% XP from Body quests" },
+  { id:"secondwind", attr:"body",  tier:2, cost:2, req:4, ic:"flame",  name:"Second Wind",
+    desc:"Forgives one missed day a week — daily streaks survive it" },
+  { id:"berserker", attr:"body",   tier:3, cost:3, req:6, ic:"sword",  name:"Berserker",
+    desc:"Land up to 2 boss strikes a day instead of 1" },
+
+  { id:"quickstudy", attr:"mind",  tier:1, cost:1, req:2, ic:"book",   name:"Quick Study",
+    desc:"+10% XP from Mind quests" },
+  { id:"deepfocus", attr:"mind",   tier:2, cost:2, req:4, ic:"hourglass", name:"Scholar's Focus",
+    desc:"+25% XP on quests finished by timer" },
+  { id:"foresight", attr:"mind",   tier:3, cost:3, req:6, ic:"star",   name:"Foresight",
+    desc:"The quest board offers a fourth quest each day" },
+
+  { id:"coinpurse", attr:"grind",  tier:1, cost:1, req:2, ic:"coin",   name:"Coin Purse",
+    desc:"+15% gold from every quest" },
+  { id:"haggler",   attr:"grind",  tier:2, cost:2, req:4, ic:"coin",   name:"Haggler",
+    desc:"Rewards cost 15% less gold" },
+  { id:"dividend",  attr:"grind",  tier:3, cost:3, req:6, ic:"gem",    name:"Daily Dividend",
+    desc:"Your first quest each day pays double gold" },
+
+  { id:"steadyhand", attr:"craft", tier:1, cost:1, req:2, ic:"gem",    name:"Steady Hands",
+    desc:"+10% XP from Craft quests" },
+  { id:"artisan",   attr:"craft",  tier:2, cost:2, req:4, ic:"star",   name:"Artisan",
+    desc:"Skills gain 25% more XP" },
+  { id:"masterwork", attr:"craft", tier:3, cost:3, req:6, ic:"crown",  name:"Masterwork",
+    desc:"Boss victory rewards +50%" },
+
+  { id:"warmwords", attr:"social", tier:1, cost:1, req:2, ic:"sun",    name:"Warm Words",
+    desc:"+10% XP from Social quests" },
+  { id:"networker", attr:"social", tier:2, cost:2, req:4, ic:"shield", name:"Networker",
+    desc:"+20% XP on quests taken from the quest board" },
+  { id:"renowned",  attr:"social", tier:3, cost:3, req:6, ic:"crown",  name:"Renowned",
+    desc:"+5% XP on absolutely everything" },
+];
+function hasPerk(id){ return !!(state.perks && state.perks[id]); }
+function perkPointsEarned(){ return Math.max(0, charLevel() - 1) + (state.stats.bosses || 0); }
+function perkPointsSpent(){
+  return PERKS.reduce((t, p) => t + (hasPerk(p.id) ? p.cost : 0), 0);
+}
+function perkPoints(){ return perkPointsEarned() - perkPointsSpent(); }
+function perkLocked(p){   // prerequisite: the branch's attribute level, and the tier below it
+  const lvl = levelInfo(state.attrs[p.attr], attrNeed).level;
+  if(lvl < p.req) return "Needs " + ATTRS[p.attr].name + " Lv " + p.req;
+  const below = PERKS.find(x => x.attr === p.attr && x.tier === p.tier - 1);
+  if(below && !hasPerk(below.id)) return "Unlock " + below.name + " first";
+  if(perkPoints() < p.cost) return "Needs " + p.cost + " perk point" + (p.cost > 1 ? "s" : "");
+  return null;
+}
+function unlockPerk(id){
+  const p = PERKS.find(x => x.id === id);
+  if(!p || hasPerk(id) || perkLocked(p)) return false;
+  state.perks[id] = Date.now();
+  save(); render();
+  showToast("Perk unlocked", p.name + " · " + p.desc, null, null);
+  sparkBurst(window.innerWidth / 2, window.innerHeight * 0.3, "#D9A94E");
+  announceBadges(checkAchievements(), 4600);
+  return true;
+}
+/* ---- effect helpers, read by the systems they modify ---- */
+function xpMultFor(q, viaTimer){
+  let m = 1;
+  if(hasPerk("ironhabit")  && q.attr === "body")   m += 0.10;
+  if(hasPerk("quickstudy") && q.attr === "mind")   m += 0.10;
+  if(hasPerk("steadyhand") && q.attr === "craft")  m += 0.10;
+  if(hasPerk("warmwords")  && q.attr === "social") m += 0.10;
+  if(hasPerk("renowned"))                          m += 0.05;
+  if(hasPerk("deepfocus") && viaTimer)             m += 0.25;
+  if(hasPerk("networker") && q.src)                m += 0.20;
+  return m;
+}
+function goldMult(){ return hasPerk("coinpurse") ? 1.15 : 1; }
+function skillMult(){ return hasPerk("artisan") ? 1.25 : 1; }
+function rewardCost(rw){ return hasPerk("haggler") ? Math.max(5, Math.round(rw.cost * 0.85)) : rw.cost; }
+function strikesPerDay(){ return hasPerk("berserker") ? 2 : 1; }
+function boardSlots(){ return hasPerk("foresight") ? 4 : 3; }
+function shieldReady(){
+  if(!hasPerk("secondwind")) return false;
+  return !state.shield || state.shield.week !== thisWeek();
 }
 
 /* ===== achievements ===== */
@@ -1050,6 +1235,8 @@ const BADGES = [
   { id:"giants",  ic:"crown",     name:"Giant Slayer",         desc:"Vanquish 3 bosses",                     check:s => (s.stats.bosses || 0) >= 3 },
   { id:"skilled", ic:"gem",       name:"Skilled Hand",         desc:"Take any skill to level 5",             check:s => (s.skills || []).some(k => levelInfo(k.xp, skillNeed).level >= 5) },
   { id:"poly",    ic:"book",      name:"Polymath",             desc:"Take 5 skills to level 3",              check:s => (s.skills || []).filter(k => levelInfo(k.xp, skillNeed).level >= 3).length >= 5 },
+  { id:"ascend",  ic:"star",      name:"Ascendant",            desc:"Unlock 5 perks",                        check:s => Object.keys(s.perks || {}).length >= 5 },
+  { id:"crusade", ic:"shield",    name:"Crusader",             desc:"Complete a whole campaign",             check:s => (s.campaigns || []).some(c => c.done) },
 ];
 function checkAchievements(){
   const earned = [];
@@ -1073,7 +1260,7 @@ function announceBadges(earned, delay){
 /* ===== mutations ===== */
 let openAttr = null;
 let justDoneId = null;
-function completeQuest(id){
+function completeQuest(id, viaTimer){
   const q = state.quests.find(x => x.id === id);
   if(!q || completedNow(q)) return null;
 
@@ -1082,8 +1269,18 @@ function completeQuest(id){
 
   q.prev = { streak:q.streak, lastDone:q.lastDone, lastWeek:q.lastWeek, done:q.done };
   const tk = todayKey();
+  let shieldUsed = false;
   if(q.type === "daily"){
-    q.streak = (q.lastDone === yesterdayKey()) ? (q.streak||0) + 1 : 1;
+    const back2 = new Date(); back2.setDate(back2.getDate() - 2);
+    if(q.lastDone === yesterdayKey()){
+      q.streak = (q.streak || 0) + 1;
+    }else if(q.lastDone === dayKey(back2) && shieldReady() && (q.streak || 0) >= 1){
+      q.streak = (q.streak || 0) + 1;                  // Second Wind covers the gap
+      state.shield = { week: thisWeek(), quest: q.id };
+      shieldUsed = true;
+    }else{
+      q.streak = 1;
+    }
     q.lastDone = tk;
   }else if(q.type === "weekly"){
     q.lastWeek = thisWeek();
@@ -1093,13 +1290,16 @@ function completeQuest(id){
     q.lastDone = tk;
   }
 
-  state.xp += q.xp;
-  state.gold += q.xp;
-  state.attrs[q.attr] += q.xp;
+  const gain = Math.max(1, Math.round(q.xp * xpMultFor(q, viaTimer)));
+  const firstToday = !state.history.some(h => !h.type && h.day === tk);
+  const goldGain = Math.max(1, Math.round(gain * goldMult() * (hasPerk("dividend") && firstToday ? 2 : 1)));
+  state.xp += gain;
+  state.gold += goldGain;
+  state.attrs[q.attr] += gain;
   state.stats.done++;
   const sk = SK(q.tag);
   const beforeSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
-  if(sk) sk.xp += q.xp;
+  if(sk) sk.xp += Math.max(1, Math.round(gain * skillMult()));
   const afterSkill = sk ? levelInfo(sk.xp, skillNeed).level : 0;
   if(q.src) LT(q.src).c++;
 
@@ -1107,22 +1307,23 @@ function completeQuest(id){
   const struck = [], victories = [];
   for(const b of state.bosses){
     if(b.defeated || b.tag !== q.tag) continue;
-    if(b.log.some(e => e.d === tk)) continue;
+    if(b.log.filter(e => e.d === tk).length >= strikesPerDay()) continue;
     b.log.push({ d: tk, q: q.id });
     struck.push({ id: b.id, n: b.log.length, need: b.need });
     if(b.log.length >= b.need){
       b.defeated = Date.now();
       state.stats.bosses++;
-      const bonusXp = b.need * 25, bonusGold = b.need * 50;
+      const mw = hasPerk("masterwork") ? 1.5 : 1;
+      const bonusXp = Math.round(b.need * 25 * mw), bonusGold = Math.round(b.need * 50 * mw);
       state.xp += bonusXp; state.attrs[b.attr] += bonusXp; state.gold += bonusGold;
-      victories.push({ boss: b, bonusXp, bonusGold });
+      victories.push({ boss: b, bonusXp, bonusGold, camp: b.campaign ? advanceCampaign(b) : null });
     }
   }
 
   const afterChar = levelInfo(state.xp, charNeed).level;
   const afterAttr = levelInfo(state.attrs[q.attr], attrNeed).level;
 
-  const entry = { ts: Date.now(), day: tk, qid: q.id, name: q.name, attr: q.attr, xp: q.xp };
+  const entry = { ts: Date.now(), day: tk, qid: q.id, name: q.name, attr: q.attr, xp: gain, gold: goldGain };
   if(afterChar > beforeChar) entry.cu = afterChar;
   if(afterAttr > beforeAttr) entry.au = afterAttr;
   state.history.unshift(entry);
@@ -1147,8 +1348,9 @@ function completeQuest(id){
     if(afterSkill > beforeSkill) sub = sk.name + " skill reached Lv " + afterSkill;
     else if(afterAttr > beforeAttr) sub += " reached Lv " + afterAttr;
     else if(q.type === "daily" && q.streak >= 2) sub += " · " + q.streak + "-day streak";
-    sub += " · +" + q.xp + " gold";
-    showToast("+" + q.xp + " XP", sub, q.attr, id);
+    sub += " · +" + goldGain + " gold";
+    if(shieldUsed) sub = "Second Wind saved your streak · " + q.streak + " days";
+    showToast("+" + gain + " XP", sub, q.attr, id);
   }
   announceBadges(checkAchievements(), 1700);
   for(const st of struck) spawnDamage(st.id, st.n, st.need);   // after every re-render, or the float is wiped
@@ -1164,12 +1366,15 @@ function uncompleteQuest(id){
   q.streak = q.prev.streak; q.lastDone = q.prev.lastDone;
   q.lastWeek = q.prev.lastWeek; q.done = q.prev.done; q.prev = null;
 
-  state.xp = Math.max(0, state.xp - q.xp);
-  state.gold = Math.max(0, state.gold - q.xp);
+  const rec = state.history.find(h => h.qid === id && h.day === todayKey() && !h.type);
+  const undoXp = rec ? rec.xp : q.xp, undoGold = rec ? (rec.gold || rec.xp) : q.xp;
+  state.xp = Math.max(0, state.xp - undoXp);
+  state.gold = Math.max(0, state.gold - undoGold);
   state.stats.done = Math.max(0, state.stats.done - 1);
-  state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
+  state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - undoXp);
   const usk = SK(q.tag);
-  if(usk) usk.xp = Math.max(0, usk.xp - q.xp);
+  if(usk) usk.xp = Math.max(0, usk.xp - Math.round(undoXp * skillMult()));
+  if(state.shield && state.shield.quest === id && state.shield.week === thisWeek()) state.shield = null;
   for(const b of state.bosses){   // withdraw today's strike; a defeat already claimed stays won
     if(b.defeated) continue;
     const i = b.log.findIndex(e => e.q === q.id && e.d === todayKey());
@@ -1293,6 +1498,30 @@ function renderToday(){
     html += '<div class="cal cal-err">' + esc(calInfo.msg) + '</div>';
   }
   html += charCardHTML();
+
+  const liveCamps = state.campaigns.filter(c => !c.done);
+  html += '<div class="sect"><div class="sect-label"><span>Campaigns</span><button class="sect-add" data-act="camp-new">+ Long goal</button></div>';
+  if(!liveCamps.length){
+    html += '<div class="empty">No campaign underway. Name a long goal and it will be split into a dated timeline.</div>';
+  }else{
+    html += liveCamps.map(c => {
+      const pct = Math.round((c.idx / c.phases.length) * 100);
+      return '<div class="camp"><div class="camp-top"><span class="camp-name">' + esc(c.name) + '</span>' +
+        '<button class="icon-btn" data-act="camp-drop" data-id="' + c.id + '" aria-label="Abandon campaign">\u2715</button></div>' +
+        '<span class="q-meta"><span class="dot" style="background:' + ATTRS[SK(c.tag) ? SK(c.tag).attr : "grind"].color + '"></span> ' +
+          skillName(c.tag) + ' · by ' + fmtDue(c.end) + ' · ' + c.perWeek + '/week</span>' +
+        '<div class="bar"><i style="width:' + pct + '%;background:var(--crimson)"></i></div>' +
+        '<ol class="phases">' + c.phases.map((ph, i) => {
+          const st = ph.done ? "done" : i === c.idx ? "now" : "todo";
+          const hits = i === c.idx ? (state.bosses.find(b => b.id === c.bossId) || { log: [] }).log.length : null;
+          return '<li class="phase ' + st + '"><span class="phase-dot"></span>' +
+            '<span class="phase-name">' + ph.name + '</span>' +
+            '<span class="phase-meta num">' + (st === "now" && hits !== null ? hits + '/' + ph.need : ph.need + ' sessions') +
+            ' · ' + fmtDue(ph.due) + '</span></li>';
+        }).join("") + '</ol></div>';
+    }).join("");
+  }
+  html += '</div>';
 
   const activeBosses = state.bosses.filter(b => !b.defeated);
   html += '<div class="sect"><div class="sect-label"><span>Boss battles</span><button class="sect-add" data-act="boss-new">+ Challenge</button></div>';
@@ -1433,6 +1662,35 @@ function renderHistory(){
   $("#view-history").innerHTML = html;
 }
 
+function renderPerks(){
+  const pts = perkPoints(), owned = PERKS.filter(p => hasPerk(p.id)).length;
+  let html = '<div class="screen-head"><h1 class="serif">Perks</h1><span class="sub num">' + owned + ' / ' + PERKS.length + ' unlocked</span></div>';
+  html += '<div class="wallet"><span class="coin-gem"></span><div>' +
+    '<div class="wallet-n serif num">' + pts + '</div>' +
+    '<small>perk point' + (pts === 1 ? "" : "s") + ' to spend — one per character level, one per boss felled</small></div></div>';
+
+  html += '<div class="sect">' + Object.keys(ATTRS).map(a => {
+    const lvl = levelInfo(state.attrs[a], attrNeed).level;
+    const branch = PERKS.filter(p => p.attr === a).sort((x, y) => x.tier - y.tier);
+    return '<div class="branch"><div class="branch-head">' + gemHTML(a) +
+      '<span class="branch-name">' + ATTRS[a].name + '</span>' +
+      '<span class="branch-lvl num">Lv ' + lvl + '</span></div>' +
+      branch.map(p => {
+        const got = hasPerk(p.id);
+        const why = got ? null : perkLocked(p);
+        const cls = got ? "perk got" : (why ? "perk locked" : "perk ready");
+        return '<button class="' + cls + '" data-act="perk" data-id="' + p.id + '" style="--pcol:' + ATTRS[a].color + '">' +
+          '<span class="perk-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + BADGE_ICONS[p.ic] + '</svg></span>' +
+          '<span class="perk-main"><span class="perk-name">' + p.name +
+            (got ? '' : '<span class="perk-cost num">' + p.cost + ' pt' + (p.cost > 1 ? 's' : '') + '</span>') + '</span>' +
+          '<span class="perk-desc">' + p.desc + '</span>' +
+          (why ? '<span class="perk-why">' + esc(why) + '</span>' : (got ? '' : '<span class="perk-why ready">Ready to unlock — tap</span>')) +
+          '</span></button>';
+      }).join("") + '</div>';
+  }).join("") + '</div>';
+  $("#view-perks").innerHTML = html;
+}
+
 function renderRewards(){
   let html = '<div class="screen-head"><h1 class="serif">Rewards</h1><button class="btn" data-act="new-reward">+ New reward</button></div>';
   html += '<div class="wallet"><span class="coin-gem"></span><div>' +
@@ -1461,7 +1719,7 @@ function renderRewards(){
 
 function render(){
   ensureBoard();
-  renderToday(); renderQuests(); renderRewards(); renderHistory();
+  renderToday(); renderQuests(); renderPerks(); renderRewards(); renderHistory();
   renderTimerBar();
   document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
   $("#view-" + currentTab).classList.add("on");
@@ -1615,6 +1873,113 @@ function retireSkill(id){
   save(); render();
 }
 
+/* ===== campaigns: a long goal broken into a dated timeline of phases =====
+   Each phase becomes a boss on the bound skill, spawned one at a time, so the
+   long goal is always expressed as the next concrete stretch of sessions. */
+const PHASE_ARCS = {
+  3: ["Lay the groundwork", "Build momentum", "Final push"],
+  4: ["Lay the groundwork", "Build momentum", "Raise the stakes", "Final push"],
+  5: ["Lay the groundwork", "Build momentum", "Hold the line", "Raise the stakes", "Final push"],
+};
+function fmtDue(ms){
+  return new Date(ms).toLocaleDateString(undefined, { month:"short", day:"numeric" });
+}
+function planPhases(startMs, endMs, perWeek){
+  const days = Math.max(7, Math.round((endMs - startMs) / 86400000));
+  const weeks = Math.max(1, Math.round(days / 7));
+  const count = weeks <= 4 ? 3 : weeks <= 10 ? 4 : 5;
+  const total = Math.max(count, Math.round(weeks * perWeek));
+  const base = Math.floor(total / count), extra = total - base * count;
+  const names = PHASE_ARCS[count];
+  return names.map((nm, i) => ({
+    name: nm,
+    need: base + (i >= count - extra ? 1 : 0),
+    due: startMs + Math.round(days * ((i + 1) / count)) * 86400000,
+    done: null,
+  }));
+}
+function spawnPhaseBoss(c){
+  const ph = c.phases[c.idx];
+  if(!ph) return;
+  const b = mkBoss(c.name + " — " + ph.name, c.tag, ph.need);
+  b.campaign = c.id;
+  state.bosses.push(b);
+  c.bossId = b.id;
+}
+function createCampaign(name, tag, endMs, perWeek){
+  const c = { id: "c" + Math.random().toString(36).slice(2,9) + Date.now().toString(36),
+              name, tag, start: Date.now(), end: endMs, perWeek,
+              phases: planPhases(Date.now(), endMs, perWeek), idx: 0, bossId: null, done: null };
+  state.campaigns.push(c);
+  spawnPhaseBoss(c);
+  save(); render();
+  showToast("Campaign begun", c.phases.length + " phases · first: " + c.phases[0].name, null, null);
+}
+/* called when a boss dies; advances its campaign if it belonged to one */
+function advanceCampaign(boss){
+  const c = state.campaigns.find(x => x.id === boss.campaign);
+  if(!c || c.done) return null;
+  const ph = c.phases[c.idx];
+  if(ph) ph.done = Date.now();
+  c.idx++;
+  if(c.idx >= c.phases.length){
+    c.done = Date.now();
+    return { campaign: c, finished: true };
+  }
+  spawnPhaseBoss(c);
+  return { campaign: c, finished: false, next: c.phases[c.idx] };
+}
+function abandonCampaign(id){
+  const c = state.campaigns.find(x => x.id === id);
+  if(!c) return;
+  state.bosses = state.bosses.filter(b => b.campaign !== id || b.defeated);
+  state.campaigns = state.campaigns.filter(x => x.id !== id);
+  save(); render();
+}
+
+/* ---- campaign modal ---- */
+let campAttr = "craft", campTag = "trombone";
+function openCampModal(){
+  $("#c-name").value = "";
+  campAttr = "craft"; campTag = (skillsFor("craft")[0] || {}).id;
+  const d = new Date(); d.setDate(d.getDate() + 84);
+  $("#c-end").value = d.toISOString().slice(0, 10);
+  $("#c-per").value = 3;
+  paintCampModal();
+  $("#campmodal").classList.add("on");
+  setTimeout(() => $("#c-name").focus(), 120);
+}
+function closeCampModal(){ $("#campmodal").classList.remove("on"); }
+function paintCampModal(){
+  $("#c-attr").innerHTML = Object.keys(ATTRS).map(k =>
+    '<button class="chip' + (k === campAttr ? " on" : "") + '" data-cattr="' + k + '" style="--chipcol:' + ATTRS[k].color + '">' +
+    '<span class="dot" style="background:' + ATTRS[k].color + '"></span>' + ATTRS[k].name + '</button>').join("");
+  $("#c-tag").innerHTML = skillsFor(campAttr).map(o =>
+    '<button class="chip' + (o.id === campTag ? " on" : "") + '" data-ctag="' + o.id + '" style="--chipcol:' + ATTRS[campAttr].color + '">' +
+    esc(o.name) + '</button>').join("");
+  previewCamp();
+}
+function campEndMs(){
+  const v = $("#c-end").value;
+  const ms = v ? new Date(v + "T12:00:00").getTime() : 0;
+  const min = Date.now() + 7 * 86400000;
+  return Math.max(min, ms || min);
+}
+function previewCamp(){
+  const per = Math.max(1, Math.min(14, parseInt($("#c-per").value, 10) || 3));
+  const ph = planPhases(Date.now(), campEndMs(), per);
+  $("#c-preview").textContent = "Timeline: " + ph.length + " phases, " +
+    ph.reduce((t, p) => t + p.need, 0) + " sessions total — first checkpoint " + fmtDue(ph[0].due) + ".";
+}
+function saveCampModal(){
+  const name = $("#c-name").value.trim();
+  if(!name){ $("#c-name").focus(); return; }
+  if(!campTag){ return; }
+  const per = Math.max(1, Math.min(14, parseInt($("#c-per").value, 10) || 3));
+  createCampaign(name, campTag, campEndMs(), per);
+  closeCampModal();
+}
+
 /* ===== boss battles ===== */
 let victoryTimer = null;
 let editingBossId = null, bossAttr = "body", bossTag = "training";
@@ -1630,7 +1995,10 @@ function spawnDamage(bossId, n, need){
 }
 function bossVictory(v){
   $("#v-name").textContent = v.boss.name;
-  $("#v-bonus").textContent = "+" + v.bonusXp + " XP · +" + v.bonusGold + " gold";
+  let bonus = "+" + v.bonusXp + " XP · +" + v.bonusGold + " gold";
+  if(v.camp && v.camp.finished) bonus += " · CAMPAIGN COMPLETE";
+  else if(v.camp && v.camp.next) bonus += " · Next: " + v.camp.next.name;
+  $("#v-bonus").textContent = bonus;
   $("#victory").classList.add("on");
   const app = document.getElementById("app");
   app.classList.add("shake");
@@ -1693,15 +2061,16 @@ function saveBossModal(){
 let editingRewardId = null;
 function redeemReward(id){
   const rw = state.rewards.find(r => r.id === id);
-  if(!rw || state.gold < rw.cost) return false;
-  state.gold -= rw.cost;
+  const cost = rewardCost(rw);
+  if(!rw || state.gold < cost) return false;
+  state.gold -= cost;
   state.stats.redeems++;
-  const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost: rw.cost };
+  const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost };
   state.history.unshift(entry);
   if(state.history.length > 600) state.history.length = 600;
   save(); render();
   const t = $("#toast");
-  t.innerHTML = '<span class="t-xp num gold-sub">−' + rw.cost + ' gold</span>' +
+  t.innerHTML = '<span class="t-xp num gold-sub">−' + cost + ' gold</span>' +
     '<span class="t-sub">' + esc(rw.name) + ' — claimed, go enjoy it</span>' +
     '<button class="t-undo" data-unredeem="' + entry.ts + '">UNDO</button>';
   t.classList.add("on");
@@ -2017,7 +2386,7 @@ document.addEventListener("click", e => {
       case "timer-complete": {
         const qid = state.timer && state.timer.qid;
         const r = act.getBoundingClientRect();
-        const q = qid && completeQuest(qid);
+        const q = qid && completeQuest(qid, true);
         if(q){
           state.stats.timer++;
           announceBadges(checkAchievements(), 1700);
@@ -2058,8 +2427,27 @@ document.addEventListener("click", e => {
         }
         break;
       case "attr-toggle": openAttr = openAttr === id ? null : id; render(); break;
+      case "perk": {
+        const p = PERKS.find(x => x.id === id);
+        if(!p) break;
+        if(hasPerk(id)) showToast(p.name, p.desc, null, null);
+        else{
+          const why = perkLocked(p);
+          if(why) showToast(p.name, why, null, null);
+          else unlockPerk(id);
+        }
+        break;
+      }
       case "skill-new":  openSkillModal(null); break;
       case "skill-edit": openSkillModal(id); break;
+      case "camp-new":  openCampModal(); break;
+      case "camp-drop":
+        if(act.classList.contains("arm")) abandonCampaign(id);
+        else{
+          act.classList.add("arm"); act.textContent = "Drop?";
+          setTimeout(() => { if(document.body.contains(act)){ act.classList.remove("arm"); act.textContent = "\u2715"; } }, 2600);
+        }
+        break;
       case "boss-new":  openBossModal(null); break;
       case "boss-edit": openBossModal(id); break;
       case "import-pack": openPackModal(); break;
@@ -2118,6 +2506,19 @@ document.addEventListener("click", e => {
   if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
   if(e.target.id === "r-save"){ saveRewardModal(); return; }
   if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  if(e.target.id === "c-save"){ saveCampModal(); return; }
+  if(e.target.id === "c-cancel" || e.target.id === "campmodal"){ closeCampModal(); return; }
+  const cattr = e.target.closest("[data-cattr]");
+  if(cattr){ campAttr = cattr.dataset.cattr; campTag = (skillsFor(campAttr)[0] || {}).id; paintCampModal(); return; }
+  const ctag = e.target.closest("[data-ctag]");
+  if(ctag){ campTag = ctag.dataset.ctag; paintCampModal(); return; }
+  const wk = e.target.closest("[data-weeks]");
+  if(wk){
+    const d = new Date(); d.setDate(d.getDate() + (+wk.dataset.weeks) * 7);
+    $("#c-end").value = d.toISOString().slice(0, 10);
+    previewCamp();
+    return;
+  }
   if(e.target.id === "s-save"){ saveSkillModal(); return; }
   if(e.target.id === "s-cancel" || e.target.id === "skillmodal"){ closeSkillModal(); return; }
   if(e.target.id === "s-delete"){
@@ -2157,8 +2558,11 @@ document.addEventListener("click", e => {
   if(rc){ $("#r-cost").value = rc.dataset.rcost; return; }
   if(e.target.closest("#levelup")){ hideLevelUp(); return; }
 });
+document.addEventListener("input", e => {
+  if(e.target.id === "c-end" || e.target.id === "c-per") previewCamp();
+});
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); hideLevelUp(); hideVictory(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); closeCampModal(); hideLevelUp(); hideVictory(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
