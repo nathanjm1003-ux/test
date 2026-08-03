@@ -225,6 +225,17 @@
   .tab svg{ width:21px; height:21px; }
   .tab.on{ color:var(--accent-strong); }
 
+  /* ---------- achievements ---------- */
+  .badges{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  .badge{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px 8px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+  .badge.locked{ opacity:.45; border-style:dashed; box-shadow:none; }
+  .badge-ic{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent) 16%, transparent); border:2px solid var(--accent); color:var(--accent-strong); }
+  .badge.locked .badge-ic{ border-color:var(--line); color:var(--faint); background:transparent; }
+  .badge-name{ font-size:10px; line-height:1.15; text-align:center; color:var(--muted); font-weight:600; }
+  .badge:not(.locked) .badge-name{ color:var(--text); }
+
   /* ---------- effects ---------- */
   #fx2{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:44; }
   .tick.pop{ animation:tickPop .45s cubic-bezier(.2,1.6,.4,1); }
@@ -465,6 +476,8 @@ function defaultState(){
   return {
     xp: 0,
     gold: 0,
+    stats: { done:0, redeems:0, timer:0 },
+    badges: {},
     rewards: defaultRewards(),
     attrs: { body:0, mind:0, grind:0, craft:0, social:0 },
     quests: [
@@ -493,6 +506,12 @@ function load(){
         if(!("pack" in s)) s.pack = null;
         if(typeof s.gold !== "number") s.gold = s.xp || 0;   // retroactive: 1 gold per XP already earned
         if(!Array.isArray(s.rewards)) s.rewards = defaultRewards();
+        if(!s.stats) s.stats = {
+          done: s.history.filter(h => !h.type).length,
+          redeems: s.history.filter(h => h.type === "redeem").length,
+          timer: 0,
+        };
+        if(!s.badges) s.badges = {};
         return s;
       }
     }
@@ -788,6 +807,68 @@ function acceptOffer(i){
   o.accepted = true;
   save(); render();
   showToast("Accepted", (o.type === "daily" ? "New daily quest — " : "Quest added — ") + o.name, o.attr, null);
+  announceBadges(checkAchievements(), 1500);
+}
+
+/* ===== achievements ===== */
+const BADGE_ICONS = {
+  sword:'<path d="M12 3v11M9 14h6M12 14v6M10 20h4"/>',
+  flame:'<path d="M12 3c1.5 3 5 5 5 9a5 5 0 1 1-10 0c0-2.5 1.5-4 2.5-6 .5 1.5 1 2.5 1.5 3.5C11.5 7 12 5 12 3z"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>',
+  crown:'<path d="M4 18h16M4 18l-1-9 5 3 4-6 4 6 5-3-1 9"/>',
+  star:'<path d="M12 3l2.5 6 6.5.5-5 4 1.5 6.5L12 16.5 6.5 20 8 13.5l-5-4 6.5-.5L12 3z"/>',
+  coin:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>',
+  hourglass:'<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
+  book:'<path d="M5 4a2 2 0 0 1 2-2h12v18H7a2 2 0 0 0-2 2V4z"/><path d="M19 16H7a2 2 0 0 0-2 2"/>',
+  gem:'<path d="M7 4h10l4 5-9 11L3 9l4-5z"/><path d="M3 9h18"/>',
+};
+function charLevel(){ return levelInfo(state.xp, charNeed).level; }
+function attrLevels(){ return Object.keys(ATTRS).map(k => levelInfo(state.attrs[k], attrNeed).level); }
+function anyStreak(n){ return state.quests.some(q => effStreak(q) >= n); }
+function perfectDay(s){
+  const dailies = s.quests.filter(q => q.type === "daily");
+  return dailies.length >= 2 && dailies.every(q => completedNow(q));
+}
+const BADGES = [
+  { id:"first",   ic:"sword",     name:"First Blood",          desc:"Complete your first quest",             check:s => s.stats.done >= 1 },
+  { id:"d25",     ic:"sword",     name:"Adventurer",           desc:"Complete 25 quests",                    check:s => s.stats.done >= 25 },
+  { id:"d100",    ic:"crown",     name:"Centurion",            desc:"Complete 100 quests",                   check:s => s.stats.done >= 100 },
+  { id:"s3",      ic:"flame",     name:"Kindling",             desc:"Reach a 3-day streak",                  check:() => anyStreak(3) },
+  { id:"s7",      ic:"flame",     name:"Week of Fire",         desc:"Reach a 7-day streak",                  check:() => anyStreak(7) },
+  { id:"s30",     ic:"flame",     name:"Unbroken",             desc:"Reach a 30-day streak",                 check:() => anyStreak(30) },
+  { id:"l5",      ic:"star",      name:"Adept's Path",         desc:"Reach character level 5",               check:() => charLevel() >= 5 },
+  { id:"l10",     ic:"star",      name:"Double Digits",        desc:"Reach character level 10",              check:() => charLevel() >= 10 },
+  { id:"l20",     ic:"crown",     name:"Veteran of the Realm", desc:"Reach character level 20",              check:() => charLevel() >= 20 },
+  { id:"spec",    ic:"shield",    name:"Specialist",           desc:"Raise any attribute to level 5",        check:() => Math.max(...attrLevels()) >= 5 },
+  { id:"renai",   ic:"book",      name:"Renaissance Soul",     desc:"Raise every attribute to level 3",      check:() => Math.min(...attrLevels()) >= 3 },
+  { id:"master",  ic:"gem",       name:"Master of One",        desc:"Raise any attribute to level 10",       check:() => Math.max(...attrLevels()) >= 10 },
+  { id:"hoard",   ic:"coin",      name:"Dragon's Hoard",       desc:"Hold 500 gold at once",                 check:s => s.gold >= 500 },
+  { id:"treat",   ic:"coin",      name:"Treat Yourself",       desc:"Claim your first reward",               check:s => s.stats.redeems >= 1 },
+  { id:"patron",  ic:"gem",       name:"Patron of Joy",        desc:"Claim 10 rewards",                      check:s => s.stats.redeems >= 10 },
+  { id:"perfect", ic:"sun",       name:"Perfect Day",          desc:"Complete every daily in one day (2+)",  check:perfectDay },
+  { id:"dawn",    ic:"sun",       name:"Dawn Patrol",          desc:"Complete a quest before 7am",           check:s => s.history.some(h => !h.type && new Date(h.ts).getHours() < 7) },
+  { id:"guild",   ic:"shield",    name:"Guild Favorite",       desc:"Accept 10 quest board offers",          check:s => Object.values(s.learn.slot).reduce((t, x) => t + (x.a || 0), 0) >= 10 },
+  { id:"xp1k",    ic:"hourglass", name:"Seasoned",             desc:"Earn 1,000 lifetime XP",                check:s => s.xp >= 1000 },
+  { id:"clock",   ic:"hourglass", name:"Timekeeper",           desc:"Finish 5 quests by timer",              check:s => (s.stats.timer || 0) >= 5 },
+];
+function checkAchievements(){
+  const earned = [];
+  for(const b of BADGES){
+    if(!state.badges[b.id] && b.check(state)){
+      state.badges[b.id] = Date.now();
+      earned.push(b);
+    }
+  }
+  return earned;
+}
+function announceBadges(earned, delay){
+  if(!earned.length) return;
+  save(); render();
+  setTimeout(() => {
+    showToast("Deed done!", earned.map(b => b.name).join(" · "), null, null);
+    sparkBurst(window.innerWidth / 2, window.innerHeight * 0.25, "#D9A94E");
+  }, delay);
 }
 
 /* ===== mutations ===== */
@@ -815,6 +896,7 @@ function completeQuest(id){
   state.xp += q.xp;
   state.gold += q.xp;
   state.attrs[q.attr] += q.xp;
+  state.stats.done++;
   if(q.src) LT(q.src).c++;
 
   const afterChar = levelInfo(state.xp, charNeed).level;
@@ -841,6 +923,7 @@ function completeQuest(id){
     sub += " · +" + q.xp + " gold";
     showToast("+" + q.xp + " XP", sub, q.attr, id);
   }
+  announceBadges(checkAchievements(), 1700);
   return q;
 }
 
@@ -855,6 +938,7 @@ function uncompleteQuest(id){
 
   state.xp = Math.max(0, state.xp - q.xp);
   state.gold = Math.max(0, state.gold - q.xp);
+  state.stats.done = Math.max(0, state.stats.done - 1);
   state.attrs[q.attr] = Math.max(0, state.attrs[q.attr] - q.xp);
   if(q.src){ const t = LT(q.src); t.c = Math.max(0, t.c - 1); }
 
@@ -1023,6 +1107,13 @@ function renderQuests(){
 
 function renderHistory(){
   let html = '<div class="screen-head"><h1 class="serif">History</h1><span class="sub num">' + state.history.length + ' entries</span></div>';
+  const earnedCount = BADGES.filter(b => state.badges[b.id]).length;
+  html += '<div class="sect"><div class="sect-label"><span>Deeds</span><span class="num">' + earnedCount + ' / ' + BADGES.length + '</span></div><div class="badges">' +
+    BADGES.map(b =>
+      '<button class="badge' + (state.badges[b.id] ? '' : ' locked') + '" data-act="badge" data-id="' + b.id + '">' +
+      '<span class="badge-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + BADGE_ICONS[b.ic] + '</svg></span>' +
+      '<span class="badge-name">' + b.name + '</span></button>'
+    ).join("") + '</div></div>';
   if(!state.history.length){
     html += '<div class="empty">Nothing logged yet. Complete a quest and it lands here.</div>';
   }else{
@@ -1191,6 +1282,7 @@ function redeemReward(id){
   const rw = state.rewards.find(r => r.id === id);
   if(!rw || state.gold < rw.cost) return false;
   state.gold -= rw.cost;
+  state.stats.redeems++;
   const entry = { ts: Date.now(), day: todayKey(), type:"redeem", name: rw.name, cost: rw.cost };
   state.history.unshift(entry);
   if(state.history.length > 600) state.history.length = 600;
@@ -1202,12 +1294,14 @@ function redeemReward(id){
   t.classList.add("on");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, 5000);
+  announceBadges(checkAchievements(), 5300);
   return true;
 }
 function undoRedeem(ts){
   const i = state.history.findIndex(h => h.type === "redeem" && h.ts === ts);
   if(i < 0) return;
   state.gold += state.history[i].cost;
+  state.stats.redeems = Math.max(0, state.stats.redeems - 1);
   state.history.splice(i, 1);
   hideToast(); save(); render();
 }
@@ -1505,7 +1599,20 @@ document.addEventListener("click", e => {
         const qid = state.timer && state.timer.qid;
         const r = act.getBoundingClientRect();
         const q = qid && completeQuest(qid);
-        if(q) sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        if(q){
+          state.stats.timer++;
+          announceBadges(checkAchievements(), 1700);
+          save();
+          sparkBurst(r.left + r.width / 2, r.top + r.height / 2, ATTRS[q.attr].color);
+        }
+        break;
+      }
+      case "badge": {
+        const b = BADGES.find(x => x.id === id);
+        if(b){
+          const got = state.badges[b.id];
+          showToast(b.name, b.desc + (got ? " · earned " + new Date(got).toLocaleDateString() : " · not yet earned"), null, null);
+        }
         break;
       }
       case "accept-offer": acceptOffer(+act.dataset.slot); break;
@@ -1595,6 +1702,7 @@ document.addEventListener("visibilitychange", () => { if(!document.hidden) rende
 
 /* ===== boot ===== */
 state = load();
+checkAchievements();   // grandfather badges already earned, quietly
 save();   // persist any migration applied during load
 render();
 initCalendar();
