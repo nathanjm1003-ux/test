@@ -275,6 +275,40 @@
   @keyframes appShake{ 10%,50%,90%{ transform:translateX(-3px); } 30%,70%{ transform:translateX(3px); } }
 
   /* ---------- perk tree ---------- */
+  .treewrap{ margin:0 -6px; background:
+      radial-gradient(120% 60% at 50% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+      var(--surface);
+    border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:6px 2px 10px; overflow:hidden; }
+  .tree{ display:block; width:100%; height:auto; }
+  .trunk{ fill:color-mix(in srgb, var(--line) 78%, var(--text)); }
+  .roots{ fill:none; stroke:color-mix(in srgb, var(--line) 78%, var(--text)); stroke-width:7; stroke-linecap:round; }
+  .canopy circle{ fill:color-mix(in srgb, var(--accent) 20%, transparent); stroke:var(--accent); stroke-width:1.4; stroke-opacity:.55; }
+  .limb-bg{ fill:none; stroke:var(--line); stroke-width:7; stroke-linecap:round; }
+  .limb-live{ fill:none; stroke-width:7; stroke-linecap:round; opacity:.95; }
+  .limb-label{ font-size:10px; font-weight:800; letter-spacing:.14em; opacity:.85; }
+  .pnode{ cursor:pointer; }
+  .pnode-disc{ fill:var(--raised); }
+  .pnode-ring{ fill:none; stroke:var(--line); stroke-width:3; }
+  .pnode-glow{ opacity:.18; }
+  .pnode-ic{ color:var(--faint); }
+  .pnode.got .pnode-ic{ color:var(--pcol); }
+  .pnode.got .pnode-disc{ fill:color-mix(in srgb, var(--pcol) 16%, var(--raised)); }
+  .pnode.ready .pnode-ring{ stroke:var(--accent); stroke-dasharray:5 4; animation:nodePulse 2s ease-in-out infinite; }
+  .pnode.ready .pnode-ic{ color:var(--accent-strong); }
+  .pnode.locked{ opacity:.5; }
+  .pnode-label{ font-size:10.5px; font-weight:700; fill:var(--muted); }
+  .pnode.got .pnode-label, .pnode.ready .pnode-label{ fill:var(--text); }
+  .pnode-cost-bg{ fill:var(--accent); }
+  .pnode-cost{ font-size:11px; font-weight:800; fill:#2E2413; text-anchor:middle; }
+  .pnode:active .pnode-disc{ opacity:.75; }
+  @keyframes nodePulse{ 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.45; } }
+  .perk-status{ font-size:13px; font-weight:700; }
+  .perk-status.got{ color:var(--pcol, var(--accent-strong)); }
+  .perk-status.ready{ color:var(--accent-strong); }
+  .perk-status.locked{ color:var(--muted); font-weight:500; }
+  #p-branch{ font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+  .skillrow-add{ flex:none; align-self:center; width:30px; height:30px; border-radius:9px;
+    border:1px dashed var(--line); color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:16px; }
   .branch{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
     padding:12px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:0; }
   .branch + .branch{ margin-top:10px; }
@@ -373,8 +407,8 @@
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
   /* ---------- modal ---------- */
-  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal, #campmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
-  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on, #campmodal.on{ display:flex; }
+  #modal, #packmodal, #rewardmodal, #bossmodal, #skillmodal, #campmodal, #perkmodal{ position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center; background:var(--overlay); }
+  #modal.on, #packmodal.on, #rewardmodal.on, #bossmodal.on, #skillmodal.on, #campmodal.on, #perkmodal.on{ display:flex; }
   #campmodal .sheet{ max-height:92vh; overflow-y:auto; }
 
   /* ---------- campaigns ---------- */
@@ -511,6 +545,19 @@
     <div class="lu-eyebrow">Boss vanquished</div>
     <div class="v-name serif" id="v-name"></div>
     <div class="v-bonus num" id="v-bonus"></div>
+  </div>
+</div>
+
+<div id="perkmodal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="p-title">
+    <span id="p-branch"></span>
+    <h2 id="p-title" style="margin-top:-8px"></h2>
+    <p id="p-desc" style="margin:0; font-size:15px; line-height:1.4"></p>
+    <p id="p-status" class="perk-status" style="margin:0"></p>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="p-close">Close</button>
+      <button class="btn" id="p-unlock">Unlock</button>
+    </div>
   </div>
 </div>
 
@@ -1585,11 +1632,11 @@ function renderQuests(){
   html += '<div class="sect"><div class="sect-label"><span>Skills</span><button class="sect-add" data-act="skill-new">+ New skill</button></div>';
   for(const a of Object.keys(ATTRS)){
     const list = skillsFor(a);
-    if(!list.length) continue;
     html += '<div class="skillrow"><span class="gem" style="background:' + ATTRS[a].color + '"><b>' + ATTRS[a].name[0] + '</b></span>' +
-      '<span class="skillrow-list">' + list.map(s =>
+      '<span class="skillrow-list">' + (list.length ? '' : '<span class="skill-empty">No skills yet</span>') + list.map(s =>
         '<button class="chip" data-act="skill-edit" data-id="' + s.id + '" style="--chipcol:' + ATTRS[a].color + '">' +
-        esc(s.name) + ' <b class="num">' + levelInfo(s.xp, skillNeed).level + '</b></button>').join("") + '</span></div>';
+        esc(s.name) + ' <b class="num">' + levelInfo(s.xp, skillNeed).level + '</b></button>').join("") + '</span>' +
+      '<button class="skillrow-add" data-act="skill-add" data-id="' + a + '" aria-label="Add a ' + ATTRS[a].name + ' skill">+</button></div>';
   }
   html += '</div>';
 
@@ -1662,34 +1709,109 @@ function renderHistory(){
   $("#view-history").innerHTML = html;
 }
 
+/* The tree is drawn in a 400x1010 viewBox: a tapered trunk with five limbs
+   curving off alternate sides, three perk nodes riding each limb. */
+const TREE_W = 400, TREE_H = 1095;
+function qbez(t, a, c, e){
+  const u = 1 - t;
+  return { x: u*u*a.x + 2*u*t*c.x + t*t*e.x, y: u*u*a.y + 2*u*t*c.y + t*t*e.y };
+}
+const NODE_T = [0.40, 0.72, 1.0];
+function limbGeom(i){
+  const side = i % 2 === 0 ? -1 : 1;
+  const yA = 985 - i * 172;
+  const a = { x: 200, y: yA };
+  const c = { x: 200 + side * 78, y: yA - 24 };
+  const e = { x: 200 + side * 118, y: yA - 176 };
+  return { side, a, c, e, nodes: NODE_T.map(t => qbez(t, a, c, e)) };
+}
+function wrapLabel(name){
+  if(name.length <= 11) return [name];
+  const parts = name.split(" ");
+  if(parts.length === 1) return [name];
+  const mid = Math.ceil(parts.length / 2);
+  return [parts.slice(0, mid).join(" "), parts.slice(mid).join(" ")];
+}
 function renderPerks(){
   const pts = perkPoints(), owned = PERKS.filter(p => hasPerk(p.id)).length;
-  let html = '<div class="screen-head"><h1 class="serif">Perks</h1><span class="sub num">' + owned + ' / ' + PERKS.length + ' unlocked</span></div>';
+  let html = '<div class="screen-head"><h1 class="serif">Perks</h1><span class="sub num">' + owned + ' / ' + PERKS.length + '</span></div>';
   html += '<div class="wallet"><span class="coin-gem"></span><div>' +
     '<div class="wallet-n serif num">' + pts + '</div>' +
     '<small>perk point' + (pts === 1 ? "" : "s") + ' to spend — one per character level, one per boss felled</small></div></div>';
 
-  html += '<div class="sect">' + Object.keys(ATTRS).map(a => {
-    const lvl = levelInfo(state.attrs[a], attrNeed).level;
+  const order = ["body", "mind", "grind", "craft", "social"];
+  let limbs = "", nodes = "", labels = "";
+
+  order.forEach((a, i) => {
+    const g = limbGeom(i);
+    const col = ATTRS[a].color;
     const branch = PERKS.filter(p => p.attr === a).sort((x, y) => x.tier - y.tier);
-    return '<div class="branch"><div class="branch-head">' + gemHTML(a) +
-      '<span class="branch-name">' + ATTRS[a].name + '</span>' +
-      '<span class="branch-lvl num">Lv ' + lvl + '</span></div>' +
-      branch.map(p => {
-        const got = hasPerk(p.id);
-        const why = got ? null : perkLocked(p);
-        const cls = got ? "perk got" : (why ? "perk locked" : "perk ready");
-        return '<button class="' + cls + '" data-act="perk" data-id="' + p.id + '" style="--pcol:' + ATTRS[a].color + '">' +
-          '<span class="perk-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + BADGE_ICONS[p.ic] + '</svg></span>' +
-          '<span class="perk-main"><span class="perk-name">' + p.name +
-            (got ? '' : '<span class="perk-cost num">' + p.cost + ' pt' + (p.cost > 1 ? 's' : '') + '</span>') + '</span>' +
-          '<span class="perk-desc">' + p.desc + '</span>' +
-          (why ? '<span class="perk-why">' + esc(why) + '</span>' : (got ? '' : '<span class="perk-why ready">Ready to unlock — tap</span>')) +
-          '</span></button>';
-      }).join("") + '</div>';
-  }).join("") + '</div>';
+    const d = "M" + g.a.x + " " + g.a.y + " Q" + g.c.x + " " + g.c.y + " " + g.e.x + " " + g.e.y;
+    const topOwned = branch.reduce((t, p, idx) => hasPerk(p.id) ? NODE_T[idx] : t, 0);
+
+    limbs += '<path d="' + d + '" class="limb-bg"/>';
+    if(topOwned > 0) limbs += '<path d="' + d + '" class="limb-live" style="stroke:' + col + '" pathLength="1" stroke-dasharray="' + topOwned.toFixed(3) + ' 1"/>';
+
+    // branch nameplate, tucked against the trunk on the opposite side
+    labels += '<text x="' + (200 - g.side * 16) + '" y="' + (g.a.y + 5) + '" class="limb-label" ' +
+      'text-anchor="' + (g.side === 1 ? "end" : "start") + '" style="fill:' + col + '">' +
+      ATTRS[a].name.toUpperCase() + '</text>';
+
+    branch.forEach((p, idx) => {
+      const n = g.nodes[idx];
+      const got = hasPerk(p.id);
+      const why = got ? null : perkLocked(p);
+      const cls = got ? "pnode got" : (why ? "pnode locked" : "pnode ready");
+      const lines = wrapLabel(p.name);
+      // tier 1 hangs its label below; higher tiers set it above, clear of the node beneath
+      const above = idx > 0;
+      const ly = above ? n.y - 36 - (lines.length - 1) * 13 : n.y + 44;
+      const lx = above ? n.x - g.side * (lines.length > 1 ? 32 : 20) : n.x;   // lean inward, away from the node further out
+      nodes += '<g class="' + cls + '" data-act="perk" data-id="' + p.id + '" style="--pcol:' + col + '" role="button" tabindex="0">' +
+        (got ? '<circle cx="' + n.x + '" cy="' + n.y + '" r="30" class="pnode-glow" style="fill:' + col + '"/>' : '') +
+        '<circle cx="' + n.x + '" cy="' + n.y + '" r="23" class="pnode-disc"/>' +
+        '<circle cx="' + n.x + '" cy="' + n.y + '" r="23" class="pnode-ring" style="stroke:' + (got ? col : "") + '"/>' +
+        '<g transform="translate(' + (n.x - 11) + ' ' + (n.y - 11) + ') scale(0.92)" class="pnode-ic">' +
+          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">' + BADGE_ICONS[p.ic] + '</svg></g>' +
+        (got ? '' : '<circle cx="' + (n.x + 20) + '" cy="' + (n.y - 19) + '" r="9" class="pnode-cost-bg"/>' +
+          '<text x="' + (n.x + 20) + '" y="' + (n.y - 15.5) + '" class="pnode-cost">' + p.cost + '</text>') +
+        lines.map((ln, li) =>
+          '<text x="' + lx + '" y="' + (ly + li * 13) + '" class="pnode-label" text-anchor="middle">' + esc(ln) + '</text>').join("") +
+      '</g>';
+    });
+  });
+
+  html += '<div class="treewrap"><svg viewBox="0 0 ' + TREE_W + ' ' + TREE_H + '" class="tree" role="img" aria-label="Perk tree">' +
+    '<path d="M146 1082 Q176 1052 196 1024 M254 1082 Q224 1052 204 1024" class="roots"/>' +
+    '<path d="M183 1085 L192 620 Q196 380 199 82 L201 82 Q204 380 208 620 L217 1085 Z" class="trunk"/>' +
+    limbs +
+    '<g class="canopy"><circle cx="200" cy="50" r="30"/><circle cx="171" cy="73" r="22"/><circle cx="229" cy="71" r="23"/><circle cx="200" cy="86" r="19"/></g>' +
+    labels + nodes +
+  '</svg></div>';
+
   $("#view-perks").innerHTML = html;
 }
+
+/* ---- perk detail sheet ---- */
+function openPerkModal(id){
+  const p = PERKS.find(x => x.id === id);
+  if(!p) return;
+  const got = hasPerk(id), why = got ? null : perkLocked(p);
+  $("#p-title").textContent = p.name;
+  $("#p-branch").textContent = ATTRS[p.attr].name + " · tier " + p.tier;
+  $("#p-branch").style.color = ATTRS[p.attr].color;
+  $("#p-desc").textContent = p.desc;
+  const st = $("#p-status");
+  st.className = "perk-status " + (got ? "got" : why ? "locked" : "ready");
+  st.textContent = got ? "Unlocked — active now" : (why || "Ready to unlock");
+  const btn = $("#p-unlock");
+  btn.style.display = got || why ? "none" : "";
+  btn.textContent = "Unlock · " + p.cost + " pt" + (p.cost > 1 ? "s" : "");
+  btn.dataset.id = id;
+  $("#p-close").textContent = got || why ? "Close" : "Not yet";
+  $("#perkmodal").classList.add("on");
+}
+function closePerkModal(){ $("#perkmodal").classList.remove("on"); }
 
 function renderRewards(){
   let html = '<div class="screen-head"><h1 class="serif">Rewards</h1><button class="btn" data-act="new-reward">+ New reward</button></div>';
@@ -1824,13 +1946,14 @@ function importPack(txt){
 
 /* ===== skill manager ===== */
 let editingSkillId = null, skillAttr = "body";
-function openSkillModal(id){
+function openSkillModal(id, preAttr){
   editingSkillId = id || null;
   const s = id ? SK(id) : null;
-  $("#skill-title").textContent = s ? "Edit skill" : "New skill";
-  $("#s-name").value = s ? s.name : "";
+  $("#skill-title").textContent = s ? "Edit skill" : "New " + (preAttr ? ATTRS[preAttr].name + " skill" : "skill");
+  $("#s-name").value = "";
+  if(s) $("#s-name").value = s.name;
   $("#s-kw").value = s ? (s.kw || []).join(", ") : "";
-  skillAttr = s ? s.attr : "body";
+  skillAttr = s ? s.attr : (preAttr || "body");
   paintSkillModal();
   const del = $("#s-delete");
   del.style.display = s ? "" : "none";
@@ -2427,18 +2550,9 @@ document.addEventListener("click", e => {
         }
         break;
       case "attr-toggle": openAttr = openAttr === id ? null : id; render(); break;
-      case "perk": {
-        const p = PERKS.find(x => x.id === id);
-        if(!p) break;
-        if(hasPerk(id)) showToast(p.name, p.desc, null, null);
-        else{
-          const why = perkLocked(p);
-          if(why) showToast(p.name, why, null, null);
-          else unlockPerk(id);
-        }
-        break;
-      }
+      case "perk": openPerkModal(id); break;
       case "skill-new":  openSkillModal(null); break;
+      case "skill-add":  openSkillModal(null, id); break;
       case "skill-edit": openSkillModal(id); break;
       case "camp-new":  openCampModal(); break;
       case "camp-drop":
@@ -2506,6 +2620,13 @@ document.addEventListener("click", e => {
   if(e.target.id === "pack-cancel" || e.target.id === "packmodal"){ closePackModal(); return; }
   if(e.target.id === "r-save"){ saveRewardModal(); return; }
   if(e.target.id === "r-cancel" || e.target.id === "rewardmodal"){ closeRewardModal(); return; }
+  if(e.target.id === "p-unlock"){
+    const id = e.target.dataset.id;
+    closePerkModal();
+    unlockPerk(id);
+    return;
+  }
+  if(e.target.id === "p-close" || e.target.id === "perkmodal"){ closePerkModal(); return; }
   if(e.target.id === "c-save"){ saveCampModal(); return; }
   if(e.target.id === "c-cancel" || e.target.id === "campmodal"){ closeCampModal(); return; }
   const cattr = e.target.closest("[data-cattr]");
@@ -2562,7 +2683,7 @@ document.addEventListener("input", e => {
   if(e.target.id === "c-end" || e.target.id === "c-per") previewCamp();
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); closeCampModal(); hideLevelUp(); hideVictory(); }
+  if(e.key === "Escape"){ closeSheet(); closePackModal(); closeRewardModal(); closeBossModal(); closeSkillModal(); closeCampModal(); closePerkModal(); hideLevelUp(); hideVictory(); }
   if(e.key === "Enter" && $("#modal").classList.contains("on") && e.target.id === "f-name"){ saveSheet(); }
 });
 
