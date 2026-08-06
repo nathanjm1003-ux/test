@@ -320,6 +320,53 @@ try {
   );
   await directPage.close();
 
+  // 11. MP3: the reported bug, and the compressed path it lands on -----------
+  const mp3Page = watch(await browser.newPage());
+  await mp3Page.goto(`http://127.0.0.1:${PORT}/`);
+
+  // The bug: the dropzone advertised audio but its picker only accepted
+  // torrents, so an MP3 could not be selected at all.
+  const accept = await mp3Page.getAttribute('#torrent-input', 'accept');
+  check('the dropzone picker accepts audio, not just torrents', /audio|mp3/.test(accept), accept);
+
+  await mp3Page.setInputFiles('#torrent-input', join(fixtureDir, 'sample.mp3'));
+  await mp3Page.waitForSelector('#panel-player:not([hidden])', { timeout: 10000 });
+  check('an mp3 chosen through the dropzone loads', (await mp3Page.textContent('#track-title')) === 'sample.mp3');
+  check('no error is shown for a valid mp3', await mp3Page.locator('#load-error').isHidden());
+
+  await mp3Page.waitForFunction(() => document.getElementById('time-total')?.textContent !== '0:00', null, {
+    timeout: 10000,
+  });
+  check('mp3 duration is read', (await mp3Page.textContent('#time-total')) === '0:05', await mp3Page.textContent('#time-total'));
+
+  await mp3Page.click('#play-toggle');
+  await mp3Page.waitForTimeout(600);
+  check('an mp3 plays', Number(await mp3Page.inputValue('#seek')) > 0, `engine: ${await mp3Page.textContent('#engine-badge')}`);
+  await mp3Page.click('#play-toggle');
+
+  // Compressed audio has to be decoded whole, so this exercises the path WAV
+  // never takes.
+  await mp3Page.click('.preset.top');
+  await mp3Page.waitForFunction(
+    () => document.getElementById('engine-badge')?.textContent === 'time-stretch',
+    null,
+    { timeout: 20000 },
+  );
+  check(
+    'an mp3 reaches 10x via the decode path',
+    (await mp3Page.getAttribute('#engine-badge', 'title')).includes('decoded into memory'),
+    await mp3Page.getAttribute('#engine-badge', 'title'),
+  );
+  await mp3Page.close();
+
+  // An mp3 dropped rather than picked must behave the same way.
+  const dropPage = watch(await browser.newPage());
+  await dropPage.goto(`http://127.0.0.1:${PORT}/`);
+  await dropPage.setInputFiles('#audio-input', [join(fixtureDir, 'sample.mp3')]);
+  await dropPage.waitForSelector('#panel-player:not([hidden])', { timeout: 10000 });
+  check('the dedicated audio picker takes mp3 too', (await dropPage.textContent('#track-title')) === 'sample.mp3');
+  await dropPage.close();
+
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | ').slice(0, 300));
 } catch (error) {
   check('e2e run completed', false, error.message);

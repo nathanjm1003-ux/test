@@ -26,8 +26,14 @@
         <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose a torrent file or audio files">
           <div class="dropzone-icon" aria-hidden="true">⬇</div>
           <p class="dropzone-title">Drop a <code>.torrent</code> — or audio files — here</p>
-          <p class="dropzone-hint">or click to choose a torrent</p>
-          <input type="file" id="torrent-input" accept=".torrent,application/x-bittorrent" hidden />
+          <p class="dropzone-hint">or click to choose</p>
+          <input
+            type="file"
+            id="torrent-input"
+            accept=".torrent,application/x-bittorrent,audio/*,.mp3,.m4a,.m4b,.flac,.wav,.ogg,.oga,.opus,.aac,.wma,.aiff,.aif"
+            multiple
+            hidden
+          />
         </div>
         <div class="magnet-row">
           <input

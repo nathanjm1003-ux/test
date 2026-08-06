@@ -56,6 +56,30 @@ function makeWav(seconds, frequency, { channels = 2, sampleRate = SAMPLE_RATE } 
   return new Uint8Array(buffer);
 }
 
+/**
+ * A structurally valid MPEG-1 Layer III file that decodes to silence.
+ *
+ * There is no MP3 encoder in this project, but the compressed-audio path still
+ * has to be testable — and it is the path with the interesting behaviour, since
+ * compressed formats cannot stream and are memory-budgeted. Zeroed side info
+ * means part2_3_length is 0 everywhere: no Huffman data, every spectral value
+ * zero, so each frame is a legal frame of silence.
+ */
+function makeSilentMp3(seconds, { sampleRate = 44100 } = {}) {
+  const FRAME_BYTES = 417; // floor(144 * 128000 / 44100), 128kbps
+  const FRAME_SAMPLES = 1152;
+  const frames = Math.max(1, Math.round((seconds * sampleRate) / FRAME_SAMPLES));
+  const out = new Uint8Array(FRAME_BYTES * frames);
+  for (let i = 0; i < frames; i++) {
+    const at = i * FRAME_BYTES;
+    out[at] = 0xff; // sync
+    out[at + 1] = 0xfb; // sync | MPEG-1 | Layer III | no CRC
+    out[at + 2] = 0x90; // 128kbps | 44100Hz | no padding
+    out[at + 3] = 0xc0; // mono
+  }
+  return out;
+}
+
 function concat(chunks) {
   const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const out = new Uint8Array(total);
@@ -103,10 +127,17 @@ for (const file of files) {
   await writeFile(join(outputDir, ...file.path), file.data);
 }
 
+// A compressed file outside the album, for trying playback without a torrent
+// and for exercising the decode path the streaming reader cannot serve.
+const mp3Path = join(outputDir, 'sample.mp3');
+await writeFile(mp3Path, makeSilentMp3(6));
+
 const torrent = await buildTorrent('sample album', files, 16384);
 const torrentPath = join(outputDir, 'sample album.torrent');
 await writeFile(torrentPath, torrent);
 
 console.log(`Wrote ${torrentPath}`);
 for (const file of files) console.log(`Wrote ${join(outputDir, ...file.path)}`);
+console.log(`Wrote ${mp3Path} (silent, for testing playback without a torrent)`);
 console.log('\nStart the app with `npm start`, open the torrent, then attach the folder above.');
+console.log('Or just drop sample.mp3 straight onto the page.');

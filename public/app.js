@@ -149,6 +149,18 @@ function openAudioFiles(fileList) {
   toast(`${state.queue.length} track${state.queue.length === 1 ? '' : 's'} ready`);
 }
 
+/**
+ * Take a set of dropped or chosen files at face value: a torrent if one is
+ * there, audio otherwise. The dropzone accepts both, so both arrive here.
+ */
+function handleIncomingFiles(files) {
+  const list = [...files];
+  if (!list.length) return;
+  const torrent = list.find((file) => file.name.toLowerCase().endsWith('.torrent'));
+  if (torrent) void loadTorrentFile(torrent);
+  else openAudioFiles(list);
+}
+
 function applyTorrent(torrent) {
   state.torrent = torrent;
   state.localFiles = [];
@@ -557,7 +569,7 @@ function wireLoading() {
     }
   });
   input.addEventListener('change', () => {
-    if (input.files?.[0]) void loadTorrentFile(input.files[0]);
+    if (input.files?.length) handleIncomingFiles(input.files);
     input.value = '';
   });
 
@@ -572,12 +584,7 @@ function wireLoading() {
   }
   dropzone.addEventListener('drop', (event) => {
     event.preventDefault();
-    const dropped = [...(event.dataTransfer?.files ?? [])];
-    if (!dropped.length) return;
-    // Take the drop at face value: a torrent if one is there, audio otherwise.
-    const torrent = dropped.find((file) => file.name.toLowerCase().endsWith('.torrent'));
-    if (torrent) void loadTorrentFile(torrent);
-    else openAudioFiles(dropped);
+    handleIncomingFiles(event.dataTransfer?.files ?? []);
   });
 
   $('pick-audio').addEventListener('click', () => $('audio-input').click());
