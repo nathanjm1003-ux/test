@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Torrent Audio — read torrents, play at 10x</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>⏩</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="masthead">
+      <h1>Torrent Audio</h1>
+      <p class="tagline">
+        Read a <code>.torrent</code>, check its audio against the piece hashes, and play it at up to
+        <strong>10x</strong> with the pitch left alone.
+      </p>
+    </header>
+
+    <main>
+      <!-- 1. Load a torrent ------------------------------------------------->
+      <section class="panel" id="panel-load">
+        <h2><span class="step">1</span> Open a torrent</h2>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose a torrent file">
+          <div class="dropzone-icon" aria-hidden="true">⬇</div>
+          <p class="dropzone-title">Drop a <code>.torrent</code> here</p>
+          <p class="dropzone-hint">or click to choose a file</p>
+          <input type="file" id="torrent-input" accept=".torrent,application/x-bittorrent" hidden />
+        </div>
+        <div class="magnet-row">
+          <input
+            type="text"
+            id="magnet-input"
+            placeholder="…or paste a magnet: link"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button type="button" id="magnet-button" class="button">Read</button>
+        </div>
+        <p class="error" id="load-error" hidden></p>
+      </section>
+
+      <!-- 2. Torrent metadata ----------------------------------------------->
+      <section class="panel" id="panel-meta" hidden>
+        <h2><span class="step">2</span> What the torrent says</h2>
+        <h3 class="torrent-name" id="torrent-name"></h3>
+        <dl class="meta-grid" id="meta-grid"></dl>
+        <details class="trackers" id="trackers-details">
+          <summary><span id="tracker-count">0</span> trackers</summary>
+          <ul id="tracker-list"></ul>
+        </details>
+        <div class="magnet-out">
+          <code id="magnet-output"></code>
+          <button type="button" class="button ghost" id="copy-magnet">Copy magnet</button>
+        </div>
+      </section>
+
+      <!-- 3. Contents -------------------------------------------------------->
+      <section class="panel" id="panel-files" hidden>
+        <h2><span class="step">3</span> Contents</h2>
+        <div class="toolbar">
+          <label class="check">
+            <input type="checkbox" id="audio-only" checked />
+            Audio files only
+          </label>
+          <span class="spacer"></span>
+          <span class="muted" id="file-summary"></span>
+        </div>
+        <div class="table-scroll">
+          <table class="file-table">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col" class="numeric">Size</th>
+                <th scope="col" class="numeric">Pieces</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="file-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Attach + verify -------------------------------------------------->
+      <section class="panel" id="panel-attach" hidden>
+        <h2><span class="step">4</span> Attach the media</h2>
+        <p class="explainer">
+          A torrent file is a manifest — names, sizes and hashes — not the audio itself. Point this at the
+          matching files you already have and it will pair them up by path, name and size, then confirm
+          them against the torrent's SHA-1 piece hashes.
+        </p>
+        <div class="button-row">
+          <button type="button" class="button" id="pick-folder">Choose folder…</button>
+          <button type="button" class="button ghost" id="pick-files">Choose files…</button>
+          <input type="file" id="folder-input" webkitdirectory directory multiple hidden />
+          <input type="file" id="files-input" multiple hidden />
+        </div>
+        <p class="match-summary" id="match-summary" hidden></p>
+        <div class="button-row" id="verify-row" hidden>
+          <button type="button" class="button" id="verify-button">Verify against piece hashes</button>
+          <button type="button" class="button ghost" id="verify-cancel" hidden>Cancel</button>
+        </div>
+        <div class="progress" id="verify-progress" hidden>
+          <div class="progress-bar"><div class="progress-fill" id="verify-fill"></div></div>
+          <p class="muted" id="verify-status"></p>
+        </div>
+      </section>
+
+      <!-- 5. Player ---------------------------------------------------------->
+      <section class="panel player" id="panel-player" hidden>
+        <h2><span class="step">5</span> Play</h2>
+
+        <div class="now-playing">
+          <div class="now-playing-text">
+            <p class="track-title" id="track-title">Nothing loaded</p>
+            <p class="track-sub muted" id="track-sub"></p>
+          </div>
+          <span class="badge" id="engine-badge" title="">native</span>
+        </div>
+
+        <div class="seek-row">
+          <span class="time" id="time-current">0:00</span>
+          <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Seek" />
+          <span class="time" id="time-total">0:00</span>
+        </div>
+
+        <div class="transport">
+          <button type="button" class="button ghost" id="skip-back" aria-label="Back 10 seconds">−10s</button>
+          <button type="button" class="button primary" id="play-toggle" aria-label="Play">Play</button>
+          <button type="button" class="button ghost" id="skip-forward" aria-label="Forward 10 seconds">+10s</button>
+          <span class="spacer"></span>
+          <label class="volume">
+            <span aria-hidden="true">🔊</span>
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+          </label>
+        </div>
+
+        <div class="control">
+          <div class="control-head">
+            <label for="rate">Speed</label>
+            <output class="value" id="rate-value">1x</output>
+          </div>
+          <input type="range" id="rate" min="0.25" max="10" step="0.05" value="1" />
+          <div class="presets" id="rate-presets"></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head">
+            <label for="pitch">Pitch</label>
+            <output class="value" id="pitch-value">0 semitones</output>
+          </div>
+          <input type="range" id="pitch" min="-12" max="12" step="0.5" value="0" />
+          <p class="control-hint">
+            Independent of speed. Anything other than 0 switches to the time-stretching engine.
+          </p>
+        </div>
+
+        <details class="advanced">
+          <summary>Engine</summary>
+          <div class="control-head">
+            <label for="engine-mode">Selection</label>
+          </div>
+          <select id="engine-mode">
+            <option value="auto">Auto — native when it is in range, stretch above it</option>
+            <option value="native">Always native (playbackRate)</option>
+            <option value="wsola">Always time-stretch (WSOLA worklet)</option>
+          </select>
+          <div class="control-head">
+            <label for="frame-size">Smoothing window</label>
+            <output class="value" id="frame-value">2048</output>
+          </div>
+          <input type="range" id="frame-size" min="512" max="8192" step="512" value="2048" />
+          <p class="control-hint">
+            Bigger windows sound smoother on music; smaller ones keep speech crisper. Only affects the
+            time-stretching engine.
+          </p>
+          <p class="control-hint" id="decode-note"></p>
+        </details>
+
+        <div class="playlist-wrap">
+          <h3>Queue</h3>
+          <ol class="playlist" id="playlist"></ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Everything happens in this tab — no upload, no swarm, no network requests for your media.
+        <kbd>Space</kbd> play/pause · <kbd>J</kbd>/<kbd>L</kbd> skip · <kbd>[</kbd>/<kbd>]</kbd> speed ·
+        <kbd>0</kbd> reset speed
+      </p>
+    </footer>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

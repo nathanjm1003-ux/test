@@ -1,0 +1,16 @@
+{
+  "name": "torrent-audio-speed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read .torrent files, verify their audio against the piece hashes, and play it at up to 10x speed with the pitch preserved.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "test:e2e": "node scripts/e2e.mjs",
+    "fixtures": "node test/fixtures/make-fixtures.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
