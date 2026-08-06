@@ -280,6 +280,46 @@ try {
   );
   await fallbackPage.close();
 
+  // 10. Audio with no torrent at all ----------------------------------------
+  const directPage = watch(await browser.newPage());
+  await directPage.goto(`http://127.0.0.1:${PORT}/`);
+  await directPage.setInputFiles('#audio-input', [
+    join(fixtureDir, 'sample album', '02 - high tone.wav'),
+    join(fixtureDir, 'sample album', '01 - low tone.wav'),
+  ]);
+  await directPage.waitForSelector('#panel-player:not([hidden])', { timeout: 10000 });
+  check('audio files play without a torrent', (await directPage.locator('#playlist li').count()) === 2);
+  check(
+    'the queue is sorted, not left in pick order',
+    (await directPage.textContent('#track-title')) === '01 - low tone.wav',
+  );
+  check('torrent-only panels stay out of the way', await directPage.locator('#panel-attach').isHidden());
+  check(
+    'step numbers disappear when the steps were skipped',
+    await directPage.locator('#panel-player .step').isHidden(),
+  );
+
+  await directPage.click('.preset.top');
+  await directPage.waitForFunction(
+    () => document.getElementById('engine-badge')?.textContent === 'time-stretch',
+    null,
+    { timeout: 20000 },
+  );
+  const directStart = Date.now();
+  await directPage.click('#play-toggle');
+  await directPage.waitForFunction(
+    () => document.getElementById('track-title')?.textContent === '02 - high tone.wav',
+    null,
+    { timeout: 20000 },
+  );
+  const directElapsed = (Date.now() - directStart) / 1000;
+  check(
+    'a plain audio file reaches 10x',
+    directElapsed > 0.15 && directElapsed < 4,
+    `6s track took ${directElapsed.toFixed(2)}s with no torrent`,
+  );
+  await directPage.close();
+
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | ').slice(0, 300));
 } catch (error) {
   check('e2e run completed', false, error.message);

@@ -276,6 +276,19 @@ select:focus {
   align-items: center;
 }
 
+.direct-row {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+
+/* The step numbers describe the torrent flow. Opening audio directly skips it,
+   so the numbering would be describing a sequence that did not happen. */
+body.direct-mode .step {
+  display: none;
+}
+
 .check {
   display: inline-flex;
   align-items: center;

@@ -5,7 +5,7 @@ import { matchFiles, summariseMatches } from './lib/matcher.js';
 import { verifyTorrent, PIECE_OK, PIECE_BAD, PIECE_MISSING } from './lib/verify.js';
 import { SpeedPlayer, RATE_PRESETS, MIN_RATE, MAX_RATE } from './lib/player.js';
 import { formatBytes, formatTime, formatDate, formatRate, formatSemitones } from './lib/format.js';
-import { compareNatural } from './lib/media.js';
+import { compareNatural, isAudioFile, isProbablyDecodable } from './lib/media.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -106,6 +106,47 @@ function loadMagnet(uri) {
   } catch (error) {
     showError(`Could not read that magnet link: ${error.message}`);
   }
+}
+
+/**
+ * Play audio files directly, with no torrent involved.
+ *
+ * The torrent is what makes verification possible, but it is not what makes
+ * playback possible — the player only ever needed a Blob. Gating the player
+ * behind a manifest the listener may not have is friction for its own sake.
+ */
+function openAudioFiles(fileList) {
+  const audio = [...fileList].filter((file) => isAudioFile(file.name));
+  if (!audio.length) {
+    showError('None of those look like audio files.');
+    return;
+  }
+  showError('');
+
+  state.torrent = null;
+  state.localFiles = [];
+  state.match = null;
+  state.verification = null;
+  state.sources = new Map();
+  state.currentIndex = -1;
+
+  state.queue = audio
+    .map((file, index) => {
+      state.sources.set(index, file);
+      return {
+        index,
+        name: file.name,
+        path: file.webkitRelativePath || file.name,
+        length: file.size,
+        isAudio: true,
+        isBrowserDecodable: isProbablyDecodable(file.name),
+      };
+    })
+    .sort((a, b) => compareNatural(a.path, b.path));
+
+  for (const id of ['panel-meta', 'panel-files', 'panel-attach']) $(id).hidden = true;
+  showQueue();
+  toast(`${state.queue.length} track${state.queue.length === 1 ? '' : 's'} ready`);
 }
 
 function applyTorrent(torrent) {
@@ -349,7 +390,13 @@ function rebuildQueue() {
     .filter((file) => state.sources.has(file.index))
     .sort((a, b) => compareNatural(a.path, b.path));
 
+  showQueue();
+}
+
+/** Reveal the player for whatever is queued, however it got there. */
+function showQueue() {
   $('panel-player').hidden = state.queue.length === 0;
+  document.body.classList.toggle('direct-mode', !state.torrent);
   renderPlaylist();
 
   if (state.queue.length && state.currentIndex === -1) {
@@ -525,8 +572,18 @@ function wireLoading() {
   }
   dropzone.addEventListener('drop', (event) => {
     event.preventDefault();
-    const file = event.dataTransfer?.files?.[0];
-    if (file) void loadTorrentFile(file);
+    const dropped = [...(event.dataTransfer?.files ?? [])];
+    if (!dropped.length) return;
+    // Take the drop at face value: a torrent if one is there, audio otherwise.
+    const torrent = dropped.find((file) => file.name.toLowerCase().endsWith('.torrent'));
+    if (torrent) void loadTorrentFile(torrent);
+    else openAudioFiles(dropped);
+  });
+
+  $('pick-audio').addEventListener('click', () => $('audio-input').click());
+  $('audio-input').addEventListener('change', (event) => {
+    if (event.target.files?.length) openAudioFiles(event.target.files);
+    event.target.value = '';
   });
 
   $('magnet-button').addEventListener('click', () => {

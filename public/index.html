@@ -23,10 +23,10 @@
       <!-- 1. Load a torrent ------------------------------------------------->
       <section class="panel" id="panel-load">
         <h2><span class="step">1</span> Open a torrent</h2>
-        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose a torrent file">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose a torrent file or audio files">
           <div class="dropzone-icon" aria-hidden="true">⬇</div>
-          <p class="dropzone-title">Drop a <code>.torrent</code> here</p>
-          <p class="dropzone-hint">or click to choose a file</p>
+          <p class="dropzone-title">Drop a <code>.torrent</code> — or audio files — here</p>
+          <p class="dropzone-hint">or click to choose a torrent</p>
           <input type="file" id="torrent-input" accept=".torrent,application/x-bittorrent" hidden />
         </div>
         <div class="magnet-row">
@@ -38,6 +38,11 @@
             autocomplete="off"
           />
           <button type="button" id="magnet-button" class="button">Read</button>
+        </div>
+        <div class="button-row direct-row">
+          <span class="muted">Just want to play something fast?</span>
+          <button type="button" class="button ghost" id="pick-audio">Open audio files…</button>
+          <input type="file" id="audio-input" accept="audio/*,.mp3,.m4a,.m4b,.flac,.wav,.ogg,.opus,.aac" multiple hidden />
         </div>
         <p class="error" id="load-error" hidden></p>
       </section>

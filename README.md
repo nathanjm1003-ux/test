@@ -24,6 +24,13 @@ content. It does not contain the audio. So "an app that reads torrent files and 
 Step 3 is what makes reading the torrent load-bearing rather than decorative. It is a real integrity
 check, the same one a BitTorrent client runs.
 
+**You do not need a torrent.** Drop audio files straight in (or use *Open audio
+files…*) and the player works on its own — the torrent is what makes
+*verification* possible, not what makes playback possible. Note that the
+unlimited-size playback below applies to uncompressed audio: a huge MP3 plays
+fine up to the native ceiling, but time-stretching it past that needs it decoded
+whole (see [Large files](#large-files)).
+
 **It does not download from the swarm.** There is no peer wire protocol, no DHT, no tracker traffic —
 the app never makes a network request for your media, and nothing leaves the tab. See
 [Adding a download backend](#adding-a-download-backend) if you want that half.
