@@ -20,6 +20,14 @@
 // time-stretch by s/p and resample the result by p. Resampling scales duration
 // by 1/p, so the two compose back to exactly s.
 //
+// MEMORY: the stretcher never holds the whole track. Each synthesis step touches
+// only [k0 - searchRadius, k0 + searchRadius + frameSize) — under 60ms of audio —
+// so it works over a sliding *window* that somebody else keeps supplying. Whole
+// files are just the degenerate case of a window covering everything (see
+// setInput). That is what lets a 1GB file play at 10x in a few tens of MB: see
+// `neededFrom`/`neededTo`, which tell the supplier what to send next, and
+// `stalled`, which says the window ran dry.
+//
 // This file is a CLASSIC SCRIPT on purpose — no import/export. It is
 // concatenated into the AudioWorklet module at runtime (worklet module loading
 // with static imports is not dependable across browsers) and loaded directly by
@@ -33,8 +41,13 @@ class WsolaStretcher {
     this.searchStep = options.searchStep ?? 1;
 
     this.channels = 0;
-    this.input = [];
-    this.inputLength = 0;
+
+    // The window currently available to read from, and where it sits in the
+    // track. windowStart is a frame index into the whole track.
+    this.window = [];
+    this.windowStart = 0;
+    this.windowLength = 0;
+    this.totalFrames = 0;
 
     this.speed = 1;
     this.pitchRatio = 1;
@@ -45,6 +58,7 @@ class WsolaStretcher {
     this.qLen = 0;
     this.hasTemplate = false;
     this.ended = false;
+    this.stalled = false;
 
     this._configureFrame(options.frameSize ?? 2048);
   }
@@ -55,7 +69,7 @@ class WsolaStretcher {
   }
 
   get durationFrames() {
-    return this.inputLength;
+    return this.totalFrames;
   }
 
   /**
@@ -63,12 +77,31 @@ class WsolaStretcher {
    * has heard by whatever is still sitting in the output queue, so subtract it.
    */
   get positionFrames() {
-    return Math.max(0, Math.min(this.inputLength, this.inPos - this.qLen * this.timeFactor));
+    return Math.max(0, Math.min(this.totalFrames, this.inPos - this.qLen * this.timeFactor));
   }
 
-  /** True once the input is exhausted and the queue has drained. */
+  /** True once the track is exhausted and the queue has drained. */
   get finished() {
     return this.ended && this.qLen < 2;
+  }
+
+  /** First frame the next synthesis step needs. */
+  get neededFrom() {
+    return Math.max(0, Math.round(this.inPos) - this.searchRadius);
+  }
+
+  /** One past the last frame the next synthesis step needs. */
+  get neededTo() {
+    return Math.min(this.totalFrames, Math.round(this.inPos) + this.searchRadius + this.frameSize);
+  }
+
+  get windowEnd() {
+    return this.windowStart + this.windowLength;
+  }
+
+  /** Whether the loaded window can satisfy [from, to). */
+  covers(from, to) {
+    return this.windowLength > 0 && from >= this.windowStart && to <= this.windowEnd;
   }
 
   _configureFrame(frameSize) {
@@ -81,9 +114,9 @@ class WsolaStretcher {
 
     // Periodic Hann. At 50% overlap w[n] + w[n + N/2] === 1, so the overlap-add
     // reconstructs unity gain without a normalisation pass.
-    this.window = new Float32Array(size);
+    this.window_ = new Float32Array(size);
     for (let i = 0; i < size; i++) {
-      this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / size));
+      this.window_[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / size));
     }
 
     this.template = new Float32Array(this.templateSize);
@@ -105,23 +138,56 @@ class WsolaStretcher {
   }
 
   /**
-   * Install the audio to play.
+   * Install a whole track at once. Equivalent to declaring a stream and handing
+   * over a window that covers all of it.
    * @param {Float32Array[]} channelData one array per channel, all the same length
    * @param {number} [sampleRate]
    */
   setInput(channelData, sampleRate) {
-    this.input = channelData;
-    this.channels = channelData.length;
-    this.inputLength = channelData.length ? channelData[0].length : 0;
+    const length = channelData.length ? channelData[0].length : 0;
+    this.setStream({ totalFrames: length, channels: channelData.length, sampleRate });
+    if (length > 0) this.setWindow(channelData, 0);
+    this.seekFrames(0);
+  }
+
+  /**
+   * Declare a track that will be fed window by window.
+   * @param {{totalFrames:number, channels:number, sampleRate?:number}} info
+   */
+  setStream({ totalFrames, channels, sampleRate }) {
+    this.totalFrames = totalFrames;
+    this.channels = channels;
     if (sampleRate) this.sampleRate = sampleRate;
+    this.window = [];
+    this.windowStart = 0;
+    this.windowLength = 0;
     this._allocateChannels();
     this.seekFrames(0);
+  }
+
+  /**
+   * Supply the audio for [startFrame, startFrame + length). Replaces whatever
+   * window was loaded before.
+   * @param {Float32Array[]} channelData
+   * @param {number} startFrame frame index within the whole track
+   */
+  setWindow(channelData, startFrame) {
+    this.window = channelData;
+    this.windowStart = startFrame;
+    this.windowLength = channelData.length ? channelData[0].length : 0;
+    if (this.windowLength > 0) this.stalled = false;
   }
 
   /** Change frame size mid-playback (larger = smoother, smaller = tighter transients). */
   setFrameSize(frameSize) {
     const position = this.inPos;
+    const window = this.window;
+    const windowStart = this.windowStart;
+    const windowLength = this.windowLength;
     this._configureFrame(frameSize);
+    this.window = window;
+    this.windowStart = windowStart;
+    this.windowLength = windowLength;
     this.seekFrames(position);
   }
 
@@ -142,12 +208,13 @@ class WsolaStretcher {
   }
 
   seekFrames(frame) {
-    this.inPos = Math.min(this.inputLength, Math.max(0, frame));
+    this.inPos = Math.min(this.totalFrames, Math.max(0, frame));
     this.qStart = 0;
     this.qLen = 0;
     this.frac = 0;
     this.hasTemplate = false;
-    this.ended = this.inPos >= this.inputLength;
+    this.ended = this.inPos >= this.totalFrames;
+    this.stalled = false;
     for (let ch = 0; ch < this.channels; ch++) this.acc[ch].fill(0);
   }
 
@@ -171,6 +238,12 @@ class WsolaStretcher {
     this.qStart = 0;
   }
 
+  /** Read one frame of the track, or 0 outside the loaded window. */
+  _at(channel, frame) {
+    const i = frame - this.windowStart;
+    return i >= 0 && i < this.windowLength ? this.window[channel][i] : 0;
+  }
+
   /**
    * Search around `k0` for the offset whose waveform best matches the tail we
    * already committed. Normalised cross-correlation, computed on channel 0 —
@@ -180,23 +253,24 @@ class WsolaStretcher {
   _findBestOffset(k0) {
     const template = this.template;
     const size = this.templateSize;
-    const x = this.input[0];
-    const length = this.inputLength;
+    const x = this.window[0];
+    const base = this.windowStart;
+    const limit = Math.min(this.totalFrames, this.windowEnd);
 
     let lo = -this.searchRadius;
     let hi = this.searchRadius;
-    if (k0 + lo < 0) lo = -k0;
-    if (k0 + hi + size > length) hi = length - size - k0;
+    if (k0 + lo < Math.max(0, this.windowStart)) lo = Math.max(0, this.windowStart) - k0;
+    if (k0 + hi + size > limit) hi = limit - size - k0;
     if (hi < lo) return 0;
 
     let best = 0;
     let bestScore = -Infinity;
     for (let d = lo; d <= hi; d += this.searchStep) {
-      const base = k0 + d;
+      const start = k0 + d - base;
       let correlation = 0;
       let energy = 0;
       for (let i = 0; i < size; i++) {
-        const v = x[base + i];
+        const v = x[start + i];
         correlation += template[i] * v;
         energy += v * v;
       }
@@ -209,17 +283,26 @@ class WsolaStretcher {
     return best;
   }
 
-  /** Produce one hop of stretched output. Returns false when the input is spent. */
+  /**
+   * Produce one hop of stretched output.
+   * @returns {boolean} false when the track is spent or the window ran dry
+   */
   _synthesizeStep() {
-    if (this.inPos >= this.inputLength) {
+    if (this.inPos >= this.totalFrames) {
       this.ended = true;
       return false;
     }
+    // Everything this step will touch must already be in the window.
+    if (!this.covers(this.neededFrom, this.neededTo)) {
+      this.stalled = true;
+      return false;
+    }
+    this.stalled = false;
 
     const N = this.frameSize;
     const H = this.hop;
-    const length = this.inputLength;
-    const window = this.window;
+    const total = this.totalFrames;
+    const shape = this.window_;
 
     const k0 = Math.round(this.inPos);
     const offset = this.hasTemplate ? this._findBestOffset(k0) : 0;
@@ -227,34 +310,36 @@ class WsolaStretcher {
 
     this._ensureQueueSpace(H);
     const writeAt = this.qStart + this.qLen;
-    const withinBounds = start + N <= length;
+
+    // Fast path: the whole frame sits inside the window, so index directly.
+    const base = start - this.windowStart;
+    const direct = base >= 0 && base + N <= this.windowLength && start + N <= total;
 
     for (let ch = 0; ch < this.channels; ch++) {
-      const x = this.input[ch];
+      const x = this.window[ch];
       const acc = this.acc[ch];
       const q = this.queue[ch];
-      if (withinBounds) {
-        for (let i = 0; i < H; i++) q[writeAt + i] = acc[i] + x[start + i] * window[i];
-        for (let i = 0; i < H; i++) acc[i] = x[start + H + i] * window[H + i];
+      if (direct) {
+        for (let i = 0; i < H; i++) q[writeAt + i] = acc[i] + x[base + i] * shape[i];
+        for (let i = 0; i < H; i++) acc[i] = x[base + H + i] * shape[H + i];
       } else {
         for (let i = 0; i < H; i++) {
-          const j = start + i;
-          q[writeAt + i] = acc[i] + (j < length ? x[j] * window[i] : 0);
+          const frame = start + i;
+          q[writeAt + i] = acc[i] + (frame < total ? this._at(ch, frame) * shape[i] : 0);
         }
         for (let i = 0; i < H; i++) {
-          const j = start + H + i;
-          acc[i] = j < length ? x[j] * window[H + i] : 0;
+          const frame = start + H + i;
+          acc[i] = frame < total ? this._at(ch, frame) * shape[H + i] : 0;
         }
       }
     }
     this.qLen += H;
 
     // The next frame should continue from here, so this is what we match against.
-    const x0 = this.input[0];
     const templateStart = start + H;
     for (let i = 0; i < this.templateSize; i++) {
-      const j = templateStart + i;
-      this.template[i] = j < length ? x0[j] : 0;
+      const frame = templateStart + i;
+      this.template[i] = frame < total ? this._at(0, frame) : 0;
     }
     this.hasTemplate = true;
 

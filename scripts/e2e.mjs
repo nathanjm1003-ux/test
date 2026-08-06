@@ -71,13 +71,30 @@ try {
   browser = await chromium.launch({
     args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'],
   });
-  const page = await browser.newPage();
   const pageErrors = [];
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
-  page.on('console', (message) => {
-    if (message.type() === 'error') pageErrors.push(message.text());
-  });
+  const watch = (target) => {
+    target.on('pageerror', (error) => pageErrors.push(String(error)));
+    target.on('console', (message) => {
+      if (message.type() === 'error') pageErrors.push(message.text());
+    });
+    return target;
+  };
 
+  /** Open the app with the fixture torrent and its audio already attached. */
+  const openWithFixture = async (query = '') => {
+    const target = watch(await browser.newPage());
+    await target.goto(`http://127.0.0.1:${PORT}/${query}`);
+    await target.setInputFiles('#torrent-input', join(fixtureDir, 'sample album.torrent'));
+    await target.waitForSelector('#panel-meta:not([hidden])', { timeout: 5000 });
+    await target.setInputFiles('#files-input', [
+      join(fixtureDir, 'sample album', '01 - low tone.wav'),
+      join(fixtureDir, 'sample album', '02 - high tone.wav'),
+    ]);
+    await target.waitForSelector('#panel-player:not([hidden])', { timeout: 10000 });
+    return target;
+  };
+
+  const page = watch(await browser.newPage());
   await page.goto(`http://127.0.0.1:${PORT}/`);
 
   // 1. Read the torrent -----------------------------------------------------
@@ -187,6 +204,52 @@ try {
   await page.waitForTimeout(300);
   check('magnet link is read', (await page.textContent('#torrent-name')) === 'From Magnet');
   check('magnet hides the file list it cannot know', await page.locator('#panel-files').isHidden());
+
+  // 7. The whole-file decode path, which every compressed format uses --------
+  const decodePage = await openWithFixture('?noStream=1');
+  await decodePage.click('.preset.top');
+  await decodePage.waitForFunction(
+    () => document.getElementById('engine-badge')?.textContent === 'time-stretch',
+    null,
+    { timeout: 20000 },
+  );
+  const decodeStart = Date.now();
+  await decodePage.click('#play-toggle');
+  await decodePage.waitForFunction(
+    () => document.getElementById('track-title')?.textContent === '02 - high tone.wav',
+    null,
+    { timeout: 20000 },
+  );
+  const decodeElapsed = (Date.now() - decodeStart) / 1000;
+  check(
+    'the decode path reaches 10x too',
+    decodeElapsed > 0.15 && decodeElapsed < 4,
+    `6s track took ${decodeElapsed.toFixed(2)}s`,
+  );
+  check(
+    'the decode path says it decoded rather than streamed',
+    (await decodePage.getAttribute('#engine-badge', 'title')).includes('decoded into memory'),
+  );
+  await decodePage.close();
+
+  // 8. A track too large to decode ------------------------------------------
+  const cappedPage = await openWithFixture('?noStream=1&decodeBudgetMB=1');
+  await cappedPage.waitForFunction(() => !document.getElementById('rate-note')?.hidden, null, { timeout: 10000 });
+  const note = await cappedPage.textContent('#rate-note');
+  check('a track too large to decode explains the cap', note.includes('need this track decoded'), note.slice(0, 80));
+  check('presets past the cap are disabled', await cappedPage.locator('.preset.top').isDisabled());
+  check('presets within the cap stay usable', await cappedPage.locator('.preset[data-rate="2"]').isEnabled());
+
+  // It must still play — just not faster than the native engine manages.
+  await cappedPage.click('.preset[data-rate="2"]');
+  await cappedPage.click('#play-toggle');
+  await cappedPage.waitForTimeout(600);
+  check(
+    'an oversized track still plays on the native engine',
+    Number(await cappedPage.inputValue('#seek')) > 0,
+    `engine: ${await cappedPage.textContent('#engine-badge')}`,
+  );
+  await cappedPage.close();
 
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | ').slice(0, 300));
 } catch (error) {

@@ -581,6 +581,19 @@ input[type="range"]:focus-visible {
   font-size: 0.85rem;
 }
 
+.warn-note {
+  color: var(--warn);
+}
+
+.preset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.preset:disabled:hover {
+  border-color: var(--border);
+}
+
 .presets {
   display: flex;
   flex-wrap: wrap;

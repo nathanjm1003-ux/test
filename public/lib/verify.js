@@ -3,6 +3,12 @@
 // This is what makes reading the .torrent worth doing: it proves the audio you
 // are about to play really is the content the torrent describes, bit for bit,
 // and pinpoints which files are incomplete or corrupt.
+//
+// Reads go through a block cache rather than straight to the file. Torrents
+// often use 16-64KB pieces, so a 1GB download is tens of thousands of pieces;
+// slicing the file once per piece turns into tens of thousands of round trips.
+// Verification walks the content in order, so pulling a few MB at a time and
+// serving pieces out of that collapses the read count by orders of magnitude.
 
 import { sha1, bytesEqual } from './hash.js';
 import { pieceHash, pieceLengthAt } from './torrent.js';
@@ -11,6 +17,44 @@ export const PIECE_PENDING = 0;
 export const PIECE_OK = 1;
 export const PIECE_BAD = 2;
 export const PIECE_MISSING = 3;
+
+/** Bytes pulled from a file per read. */
+const BLOCK_BYTES = 4 << 20;
+
+/** Sequential reader that serves small reads out of one buffered block. */
+export class BlockReader {
+  constructor(blob, blockBytes = BLOCK_BYTES) {
+    this.blob = blob;
+    this.blockBytes = blockBytes;
+    this.block = null;
+    this.blockStart = 0;
+    this.reads = 0;
+  }
+
+  /**
+   * @param {number} offset byte offset within the file
+   * @param {number} length
+   * @returns {Promise<Uint8Array>} may be a view into the cached block
+   */
+  async read(offset, length) {
+    if (length <= 0) return new Uint8Array(0);
+    const end = offset + length;
+    if (this.block && offset >= this.blockStart && end <= this.blockStart + this.block.length) {
+      return this.block.subarray(offset - this.blockStart, end - this.blockStart);
+    }
+
+    const size = Math.max(this.blockBytes, length);
+    const stop = Math.min(this.blob.size, offset + size);
+    this.block = new Uint8Array(await this.blob.slice(offset, stop).arrayBuffer());
+    this.blockStart = offset;
+    this.reads++;
+    return this.block.subarray(0, Math.min(length, this.block.length));
+  }
+
+  release() {
+    this.block = null;
+  }
+}
 
 /** Files (by torrent index) whose byte range overlaps `[start, end)`. */
 function filesOverlapping(files, start, end) {
@@ -26,11 +70,13 @@ function filesOverlapping(files, start, end) {
 /**
  * @param {import('./torrent.js').Torrent} torrent
  * @param {Map<number, Blob>} sources torrent file index -> Blob/File
- * @param {{onProgress?: (p: {piece:number, pieceCount:number, ok:number, bad:number, missing:number}) => void,
- *          signal?: AbortSignal}} [options]
+ * @param {{onProgress?: (p: {piece:number, pieceCount:number, ok:number, bad:number,
+ *                           missing:number, bytesRead:number, bytesPerSecond:number,
+ *                           secondsRemaining:number}) => void,
+ *          signal?: AbortSignal, blockBytes?: number}} [options]
  */
 export async function verifyTorrent(torrent, sources, options = {}) {
-  const { onProgress, signal } = options;
+  const { onProgress, signal, blockBytes } = options;
   if (!torrent.hasPieceHashes) {
     throw new Error('this torrent carries no v1 piece hashes, so its contents cannot be verified');
   }
@@ -40,7 +86,23 @@ export async function verifyTorrent(torrent, sources, options = {}) {
   let bad = 0;
   let missing = 0;
   let verifiedBytes = 0;
+  let bytesRead = 0;
   let lastReport = 0;
+  const startedAt = Date.now();
+
+  // One buffered reader per file, dropped as soon as the walk passes it, so a
+  // large multi-file torrent never holds more than a couple of blocks at once.
+  const readers = new Map();
+  const readerFor = (file) => {
+    let reader = readers.get(file.index);
+    if (!reader) {
+      reader = new BlockReader(sources.get(file.index), blockBytes);
+      readers.set(file.index, reader);
+    }
+    return reader;
+  };
+
+  let buffer = new Uint8Array(torrent.pieceLength);
 
   for (let index = 0; index < torrent.pieceCount; index++) {
     if (signal?.aborted) throw new DOMException('verification cancelled', 'AbortError');
@@ -56,16 +118,17 @@ export async function verifyTorrent(torrent, sources, options = {}) {
       pieces[index] = PIECE_MISSING;
       missing++;
     } else {
-      const buffer = new Uint8Array(length);
+      const view = length === buffer.length ? buffer : buffer.subarray(0, length);
+      view.fill(0);
       for (const file of overlapping) {
+        if (!sources.has(file.index)) continue; // pad file with no source: leave the gap zeroed
         const from = Math.max(start, file.offset);
         const to = Math.min(end, file.endOffset);
-        const blob = sources.get(file.index);
-        if (!blob) continue; // pad file with no source: leave the gap zeroed
-        const slice = blob.slice(from - file.offset, to - file.offset);
-        buffer.set(new Uint8Array(await slice.arrayBuffer()), from - start);
+        const chunk = await readerFor(file).read(from - file.offset, to - from);
+        view.set(chunk, from - start);
+        bytesRead += chunk.length;
       }
-      if (bytesEqual(await sha1(buffer), pieceHash(torrent, index))) {
+      if (bytesEqual(await sha1(view), pieceHash(torrent, index))) {
         pieces[index] = PIECE_OK;
         ok++;
         verifiedBytes += length;
@@ -75,13 +138,37 @@ export async function verifyTorrent(torrent, sources, options = {}) {
       }
     }
 
-    // Throttle progress reporting; hashing a large torrent is thousands of pieces.
+    // Release readers for files entirely behind the walk.
+    for (const [fileIndex, reader] of readers) {
+      const file = torrent.files[fileIndex];
+      if (file && file.endOffset <= end) {
+        reader.release();
+        readers.delete(fileIndex);
+      }
+    }
+
+    // Throttle progress reporting; a large torrent is tens of thousands of pieces.
     const now = Date.now();
     if (onProgress && (now - lastReport > 100 || index === torrent.pieceCount - 1)) {
       lastReport = now;
-      onProgress({ piece: index + 1, pieceCount: torrent.pieceCount, ok, bad, missing });
+      const elapsed = Math.max(0.001, (now - startedAt) / 1000);
+      const bytesPerSecond = bytesRead / elapsed;
+      const remainingBytes = Math.max(0, torrent.totalLength - end);
+      onProgress({
+        piece: index + 1,
+        pieceCount: torrent.pieceCount,
+        ok,
+        bad,
+        missing,
+        bytesRead,
+        bytesPerSecond,
+        secondsRemaining: bytesPerSecond > 0 ? remainingBytes / bytesPerSecond : 0,
+      });
     }
   }
+
+  for (const reader of readers.values()) reader.release();
+  buffer = null;
 
   return { pieces, ok, bad, missing, verifiedBytes, files: deriveFileStatus(torrent, pieces, sources) };
 }

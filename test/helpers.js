@@ -78,6 +78,97 @@ export function sourcesFrom(torrent, files) {
   return sources;
 }
 
+/**
+ * Build a WAV file in memory.
+ * @param {{frames?:number, channels?:number, bitsPerSample?:number, sampleRate?:number,
+ *          format?:number, extensible?:boolean, fill?:(frame:number, channel:number)=>number,
+ *          extraChunks?:Array<{id:string, size:number}>}} [options]
+ */
+export function makeWavBytes(options = {}) {
+  const {
+    frames = 100,
+    channels = 2,
+    bitsPerSample = 16,
+    sampleRate = 44100,
+    format = 1,
+    extensible = false,
+    fill = () => 0,
+    extraChunks = [],
+  } = options;
+
+  const bytesPerSample = bitsPerSample >> 3;
+  const blockAlign = bytesPerSample * channels;
+  const dataSize = frames * blockAlign;
+  const fmtSize = extensible ? 40 : 16;
+  const extraSize = extraChunks.reduce((sum, chunk) => sum + 8 + chunk.size + (chunk.size % 2), 0);
+  const buffer = new ArrayBuffer(12 + 8 + fmtSize + extraSize + 8 + dataSize);
+  const view = new DataView(buffer);
+
+  const ascii = (offset, text) => {
+    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+
+  ascii(0, 'RIFF');
+  view.setUint32(4, buffer.byteLength - 8, true);
+  ascii(8, 'WAVE');
+
+  let at = 12;
+  ascii(at, 'fmt ');
+  view.setUint32(at + 4, fmtSize, true);
+  view.setUint16(at + 8, extensible ? 0xfffe : format, true);
+  view.setUint16(at + 10, channels, true);
+  view.setUint32(at + 12, sampleRate, true);
+  view.setUint32(at + 16, sampleRate * blockAlign, true);
+  view.setUint16(at + 20, blockAlign, true);
+  view.setUint16(at + 22, bitsPerSample, true);
+  if (extensible) {
+    view.setUint16(at + 24, 22, true); // cbSize
+    view.setUint16(at + 26, bitsPerSample, true);
+    view.setUint32(at + 28, 3, true); // channel mask
+    view.setUint16(at + 32, format, true); // SubFormat GUID starts with the real tag
+  }
+  at += 8 + fmtSize;
+
+  for (const chunk of extraChunks) {
+    ascii(at, chunk.id);
+    view.setUint32(at + 4, chunk.size, true);
+    at += 8 + chunk.size + (chunk.size % 2);
+  }
+
+  ascii(at, 'data');
+  view.setUint32(at + 4, dataSize, true);
+  at += 8;
+
+  const clamp = (value) => Math.max(-1, Math.min(1, value));
+  for (let frame = 0; frame < frames; frame++) {
+    for (let channel = 0; channel < channels; channel++) {
+      const value = clamp(fill(frame, channel));
+      const offset = at + frame * blockAlign + channel * bytesPerSample;
+      if (format === 3) {
+        if (bitsPerSample === 64) view.setFloat64(offset, value, true);
+        else view.setFloat32(offset, value, true);
+      } else if (bitsPerSample === 8) {
+        view.setUint8(offset, Math.max(0, Math.min(255, Math.round(value * 128) + 128)));
+      } else if (bitsPerSample === 16) {
+        view.setInt16(offset, Math.round(value * 32767), true);
+      } else if (bitsPerSample === 24) {
+        const sample = Math.round(value * 8388607);
+        view.setUint8(offset, sample & 0xff);
+        view.setUint8(offset + 1, (sample >> 8) & 0xff);
+        view.setUint8(offset + 2, (sample >> 16) & 0xff);
+      } else if (bitsPerSample === 32) {
+        view.setInt32(offset, Math.round(value * 2147483647), true);
+      }
+    }
+  }
+
+  return new Uint8Array(buffer);
+}
+
+export function wavBlob(options) {
+  return new Blob([makeWavBytes(options)]);
+}
+
 /** Load the WSOLA core, which is a classic script rather than a module. */
 export async function loadWsola() {
   const source = await readFile(new URL('../public/lib/wsola-core.js', import.meta.url), 'utf8');

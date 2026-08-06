@@ -1,7 +1,7 @@
 # Torrent Audio
 
 Read a `.torrent`, check its audio against the torrent's own piece hashes, and play it at up to
-**10x** with the pitch left alone.
+**10x** with the pitch left alone — at any file size, including gigabyte-plus tracks.
 
 No dependencies, no build step, no framework. `npm start` and open the page.
 
@@ -77,12 +77,47 @@ Pitch rides on the same machinery: to shift pitch by ratio `p` while holding spe
 The stretcher runs in an `AudioWorklet`, on the audio thread, so it never glitches from main-thread
 work.
 
+### Large files
+
+The stretcher never holds the track. Each synthesis step only touches
+`[position - searchRadius, position + searchRadius + frameSize)` — under 60ms of audio — so the
+worklet works over a **sliding 30-second window** that the main thread keeps topping up ahead of the
+playhead. Whole-file playback is just the degenerate case of a window covering everything.
+
+That makes playback cost a function of the window, not the file. Measured on a real **1.07 GB**
+WAV (101 minutes) in Chromium:
+
+| | growth over an idle tab |
+|---|---|
+| Verifying all 1025 pieces | **+41 MB** (110 MB/s) |
+| Playing it at 10x | **+50 MB** |
+| First audio after pressing play | **0.36 s** |
+| Seeking 95 minutes in | **instant** |
+
+The same run on a 16x smaller file costs +40 MB and +13 MB — flat, as the design intends. Decoding
+that track whole would have needed roughly 2 GB of PCM before it could play a single sample.
+
+Two things make this possible, and they apply to different formats:
+
+- **Uncompressed audio (WAV) is exactly addressable.** Frame N lives at a known byte offset, so any
+  window is read straight off disk without touching anything before it. File size is irrelevant.
+- **Compressed audio is not.** `decodeAudioData` is all-or-nothing — there is no way to ask for "just
+  the audio between 40 and 70 seconds" without a container demuxer — so those formats are decoded
+  whole and capped by a memory budget (default 1 GB of PCM, about 45 minutes of stereo). Past that,
+  the native engine still streams the file at any size, and the UI disables the unreachable presets
+  and explains why rather than letting them silently do nothing.
+
+Verification streams at every size too, and reads through a block cache: torrents often use 16-64 KB
+pieces, so a gigabyte is tens of thousands of pieces, and slicing the file once per piece turns into
+tens of thousands of round trips. Pulling 4 MB at a time and serving pieces out of that cuts a
+32-piece verification from 32 reads to 2.
+
 ### Two engines, picked automatically
 
 | | `native` | `wsola` |
 |---|---|---|
 | Mechanism | `playbackRate` + `preservesPitch` | our AudioWorklet |
-| Memory | streams, negligible | decodes the whole track to PCM |
+| Memory | streams, negligible | a 30s window (WAV) or the decoded track (compressed) |
 | Speed range | whatever the browser honours (probed at startup, capped at 4x) | 0.25x–10x, guaranteed |
 | Pitch control | none | ±12 semitones, independent |
 
@@ -90,9 +125,9 @@ work.
 pitch is shifted. Switching carries the playback position across, so it is inaudible apart from the
 decode pause the first time. You can force either engine under **Engine**.
 
-The one real cost of `wsola` is memory: it holds decoded PCM, roughly 10 MB per minute of stereo
-audio. The UI states the estimate for the loaded track. That is why `native` stays the default at
-ordinary speeds rather than routing everything through the worklet.
+`native` stays the default at ordinary speeds because it costs nothing at all — no decode, no window
+pump. The UI states what the time-stretching engine will need for the loaded track before you reach
+for it.
 
 ## Layout
 
@@ -105,7 +140,11 @@ public/
     torrent.js                   v1 + v2 + hybrid parsing, magnet URIs, piece map
     verify.js                    SHA-1 piece verification -> per-file verdicts
     matcher.js                   torrent entries <-> local files
-    player.js                    two-engine player, engine switching
+    player.js                    two-engine player, engine switching, window pump
+    sources/
+      index.js                   picks a reading strategy per file
+      wav.js                     streaming reader: exact byte-range access, any size
+      decoded.js                 whole-file decode, memory-budgeted
     wsola-core.js                the DSP (classic script — see below)
     hash.js  format.js  media.js
   worklets/
@@ -128,8 +167,9 @@ Two implementation notes worth knowing before editing:
 ## Tests
 
 ```sh
-npm test             # 54 unit tests, no dependencies
-npm run test:e2e     # drives the real app in Chromium (needs playwright; skips if absent)
+npm test                 # 92 unit tests, no dependencies
+npm run test:e2e         # drives the real app in Chromium (needs playwright; skips if absent)
+npm run test:e2e:large   # generates a 1GB file and measures memory while playing it
 ```
 
 The unit tests cover bencode round-tripping and malformed input, info-hash correctness against
@@ -142,20 +182,38 @@ The DSP is tested on its output, not its internals: output length tracks the req
 within one hop, and **zero-crossing rate stays within 10% of the original at 1x, 2x, 5x and 10x** —
 that is the pitch-preservation claim, measured.
 
-The e2e check walks the whole flow in a real browser and times it: a 6-second track at 10x completes
-in **~0.66 s**.
+Windowed streaming is held to a strict standard: playing a track window by window must produce
+**bit-identical output** to holding it all in memory, at 1x, 4x and 10x. A listener cannot tell which
+path ran.
+
+The e2e checks walk the whole flow in a real browser and time it: a 6-second track at 10x completes
+in **~0.66 s**, and the large-file run reports browser memory stage by stage, read from `/proc` as
+PSS so shared pages between Chromium's processes are not counted more than once.
 
 ## Limitations
 
 - **No swarm.** Reads torrents, does not download them.
 - **Format support is the browser's.** Formats it cannot decode (APE, WMA, DSF…) are still listed and
   verified, and flagged in the UI rather than failing silently.
-- **`wsola` holds decoded PCM in memory**, so a multi-hour audiobook is expensive. `native` streams
-  and has no such limit.
+- **Only uncompressed audio streams.** WAV time-stretches at any size; compressed formats are
+  decoded whole and capped at roughly 45 minutes of stereo. A frame-indexed MP3 or FLAC reader would
+  lift that — see below.
 - **10x is intelligible, not transparent.** No time-stretcher is artefact-free that far out. The
   **smoothing window** control trades smoothness on music against crispness on speech.
 - **Verification needs v1 piece hashes.** Pure-v2 torrents parse and list fine, but v2 uses merkle
   trees rather than a flat piece list, which this does not yet check against.
+
+## Extending it
+
+Both open seams take the same shape: implement an interface, change nothing else.
+
+**More streaming formats.** Sources expose
+`{ streaming, sampleRate, channels, totalFrames, duration, readFrames(start, count), close() }`, and
+`createAudioSource` picks between them. A frame-indexed MP3 or FLAC reader implementing that would
+give those formats the same unlimited-size playback WAV gets, without the player, the stretcher or
+the worklet changing at all. Two diagnostics help when working on this: `?noStream=1` forces the
+whole-file decode path, and `?decodeBudgetMB=N` shrinks the budget so the fallback behaviour is easy
+to trigger.
 
 ## Adding a download backend
 

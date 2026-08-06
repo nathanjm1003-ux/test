@@ -3,6 +3,12 @@
 // This file is not loaded on its own: player.js fetches wsola-core.js and this
 // file, concatenates them, and hands the result to `audioWorklet.addModule` as a
 // blob. So `WsolaStretcher` is already in scope here, and there is no import.
+//
+// The processor holds only a sliding window of the track, never the whole
+// thing — `process()` is synchronous and cannot await a decode, so the main
+// thread supplies windows ahead of the playhead. Every position report carries
+// the frame range the stretcher will need next, and running dry posts a `need`
+// so the supplier can catch up immediately.
 
 class StretchProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -14,35 +20,47 @@ class StretchProcessor extends AudioWorkletProcessor {
     this.scratch = [];
     this.scratchFrames = 0;
     this.framesSinceReport = 0;
+    this.framesSinceNeed = 0;
     this.reportInterval = Math.round(sampleRate / 20); // ~50ms
     this.port.onmessage = (event) => this.handleMessage(event.data);
   }
 
   handleMessage(message) {
     switch (message.type) {
-      case 'load': {
-        const channels = message.channels.map((buffer) => new Float32Array(buffer));
-        this.stretcher.setInput(channels, message.sampleRate || sampleRate);
-        this.loaded = channels.length > 0 && channels[0].length > 0;
+      case 'stream': {
+        this.stretcher.setStream({
+          totalFrames: message.totalFrames,
+          channels: message.channels,
+          sampleRate: message.sampleRate || sampleRate,
+        });
+        this.loaded = message.totalFrames > 0 && message.channels > 0;
         this.playing = false;
         this.scratch = [];
         this.scratchFrames = 0;
         this.port.postMessage({
-          type: 'loaded',
+          type: 'ready',
           duration: this.stretcher.durationFrames / this.stretcher.sampleRate,
           channels: this.stretcher.channels,
         });
         break;
       }
+      case 'window': {
+        this.stretcher.setWindow(
+          message.channels.map((buffer) => new Float32Array(buffer)),
+          message.startFrame,
+        );
+        break;
+      }
       case 'unload':
         this.loaded = false;
         this.playing = false;
-        this.stretcher.setInput([], sampleRate);
+        this.stretcher.setStream({ totalFrames: 0, channels: 0, sampleRate });
         break;
       case 'play':
         if (this.loaded) {
           if (this.stretcher.finished) this.stretcher.seekFrames(0);
           this.playing = true;
+          this.requestWindow(); // in case the window is stale after a seek
         }
         break;
       case 'pause':
@@ -52,6 +70,7 @@ class StretchProcessor extends AudioWorkletProcessor {
       case 'seek':
         this.stretcher.seekSeconds(message.seconds);
         this.postPosition();
+        this.requestWindow();
         break;
       case 'params':
         if (typeof message.speed === 'number') this.stretcher.setSpeed(message.speed);
@@ -65,11 +84,26 @@ class StretchProcessor extends AudioWorkletProcessor {
     }
   }
 
+  /** Ask the main thread for the window covering the playhead. */
+  requestWindow() {
+    this.port.postMessage({
+      type: 'need',
+      from: this.stretcher.neededFrom,
+      to: this.stretcher.neededTo,
+      position: this.stretcher.positionFrames,
+    });
+  }
+
   postPosition() {
+    const s = this.stretcher;
     this.port.postMessage({
       type: 'position',
-      seconds: this.stretcher.positionFrames / this.stretcher.sampleRate,
-      duration: this.stretcher.durationFrames / this.stretcher.sampleRate,
+      seconds: s.positionFrames / s.sampleRate,
+      duration: s.durationFrames / s.sampleRate,
+      positionFrames: s.positionFrames,
+      windowStart: s.windowStart,
+      windowEnd: s.windowEnd,
+      stalled: s.stalled,
     });
   }
 
@@ -103,6 +137,17 @@ class StretchProcessor extends AudioWorkletProcessor {
     if (this.framesSinceReport >= this.reportInterval) {
       this.framesSinceReport = 0;
       this.postPosition();
+    }
+
+    // Ran out of window: chase the supplier, but not on every render quantum.
+    if (this.stretcher.stalled) {
+      this.framesSinceNeed += frames;
+      if (this.framesSinceNeed >= this.reportInterval) {
+        this.framesSinceNeed = 0;
+        this.requestWindow();
+      }
+    } else {
+      this.framesSinceNeed = this.reportInterval;
     }
 
     if (this.stretcher.finished) {

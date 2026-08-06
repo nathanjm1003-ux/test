@@ -21,7 +21,15 @@ const state = {
   seeking: false,
 };
 
-const player = new SpeedPlayer();
+// Diagnostics, also handy on low-memory machines:
+//   ?decodeBudgetMB=N  cap the memory the time-stretching engine may use
+//   ?noStream=1        force whole-file decoding even for formats that stream
+const params = new URLSearchParams(location.search);
+const budgetMB = Number(params.get('decodeBudgetMB'));
+const player = new SpeedPlayer({
+  budgetBytes: Number.isFinite(budgetMB) && budgetMB > 0 ? budgetMB * 1e6 : undefined,
+  preferStreaming: params.get('noStream') !== '1',
+});
 
 // ---------------------------------------------------------------- utilities
 
@@ -294,10 +302,13 @@ async function runVerification() {
   try {
     const result = await verifyTorrent(t, state.sources, {
       signal: controller.signal,
-      onProgress: ({ piece, pieceCount, ok, bad, missing }) => {
+      onProgress: ({ piece, pieceCount, ok, bad, missing, bytesPerSecond, secondsRemaining }) => {
         fill.style.width = `${(piece / pieceCount) * 100}%`;
+        const rate = bytesPerSecond > 0 ? ` · ${formatBytes(bytesPerSecond)}/s` : '';
+        // Hashing a gigabyte takes long enough that an ETA is worth showing.
+        const eta = secondsRemaining > 2 ? ` · ${formatTime(secondsRemaining)} left` : '';
         status.textContent =
-          `Piece ${piece} of ${pieceCount} — ${ok} ok, ${bad} failed, ${missing} unavailable`;
+          `Piece ${piece} of ${pieceCount} — ${ok} ok, ${bad} failed, ${missing} unavailable${rate}${eta}`;
       },
     });
     state.verification = result;
@@ -390,6 +401,9 @@ async function selectTrack(index, autoplay) {
   $('track-sub').textContent = `${file.path} · ${formatBytes(file.length)}`;
   renderPlaylist();
   updateDecodeNote();
+  // Work out up front whether this track can reach 10x, so the speed control
+  // tells the truth before the user reaches for it.
+  void player.checkStretchSupport().then(renderRate);
 
   if (autoplay) await player.play();
 }
@@ -413,16 +427,36 @@ function renderTime() {
 
 function renderEngine() {
   const el = $('engine-badge');
-  el.textContent = player.engine === 'native' ? 'native' : 'time-stretch';
-  el.className = player.engine === 'native' ? 'badge' : 'badge accent';
+  if (player.buffering) {
+    el.textContent = 'buffering…';
+    el.className = 'badge warn';
+  } else {
+    el.textContent = player.engine === 'native' ? 'native' : 'time-stretch';
+    el.className = player.engine === 'native' ? 'badge' : 'badge accent';
+  }
   el.title = player.engineReason();
 }
 
 function renderRate() {
   $('rate-value').textContent = formatRate(player.rate);
   $('rate').value = String(player.rate);
+
+  // When a track cannot be time-stretched, the presets past the native ceiling
+  // are unreachable — say so rather than letting them silently do nothing.
+  const ceiling = player.effectiveMaxRate;
   for (const button of $('rate-presets').children) {
-    button.setAttribute('aria-pressed', String(Math.abs(Number(button.dataset.rate) - player.rate) < 1e-6));
+    const rate = Number(button.dataset.rate);
+    button.setAttribute('aria-pressed', String(Math.abs(rate - player.rate) < 1e-6));
+    button.disabled = rate > ceiling;
+    button.title = rate > ceiling ? player.stretchBlockedReason ?? '' : '';
+  }
+
+  const note = $('rate-note');
+  if (player.stretchBlockedReason) {
+    note.textContent = player.stretchBlockedReason;
+    note.hidden = false;
+  } else {
+    note.hidden = true;
   }
   renderEngine();
 }
@@ -435,13 +469,14 @@ function renderPitch() {
 }
 
 function updateDecodeNote() {
-  const bytes = player.estimateDecodedBytes();
-  if (!bytes) {
+  const memory = player.describeMemory();
+  if (!memory) {
     $('decode-note').textContent = '';
     return;
   }
-  $('decode-note').textContent =
-    `Time-stretching decodes the whole track into memory — roughly ${formatBytes(bytes)} for this one.`;
+  $('decode-note').textContent = memory.streaming
+    ? `This track streams in windows — time-stretching holds about ${formatBytes(memory.bytes)} at a time, whatever the file size.`
+    : `Time-stretching decodes this track into memory — roughly ${formatBytes(memory.bytes)}.`;
 }
 
 function buildPresets() {
@@ -561,12 +596,18 @@ function wirePlayer() {
     renderPitch();
   });
   player.addEventListener('engine', renderEngine);
+  player.addEventListener('buffering', renderEngine);
+  player.addEventListener('capability', () => {
+    renderRate();
+    updateDecodeNote();
+  });
   player.addEventListener('load', () => {
     renderTime();
     updateDecodeNote();
   });
   player.addEventListener('decoding', (event) => {
-    if (event.detail.active) toast('Decoding for time-stretching…');
+    if (event.detail.active) toast('Preparing audio for time-stretching…');
+    else updateDecodeNote();
   });
   player.addEventListener('error', (event) => toast(event.detail.message));
   player.addEventListener('ended', () => {
