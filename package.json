@@ -10,7 +10,9 @@
     "test:e2e": "node scripts/e2e.mjs",
     "test:e2e:large": "node scripts/e2e-large.mjs",
     "fixtures": "node test/fixtures/make-fixtures.mjs",
-    "fixtures:large": "node test/fixtures/make-large-fixture.mjs"
+    "fixtures:large": "node test/fixtures/make-large-fixture.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "test:e2e:bundle": "node scripts/bundle.mjs dist/torrent-audio.html --standalone && node scripts/e2e-bundle.mjs"
   },
   "engines": {
     "node": ">=18"

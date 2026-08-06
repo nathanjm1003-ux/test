@@ -129,6 +129,32 @@ decode pause the first time. You can force either engine under **Engine**.
 pump. The UI states what the time-stretching engine will need for the loaded track before you reach
 for it.
 
+## One-file build
+
+```sh
+npm run bundle -- dist/torrent-audio.html --standalone
+```
+
+Flattens the module graph, inlines the stylesheet and the two classic scripts,
+and embeds the AudioWorklet's source as a string so the page has something to build
+a blob from without fetching anything. The result is ~155 KB, makes zero network
+requests, and works from any static host. Omit `--standalone` for fragment HTML
+suitable for embedding.
+
+`npm run test:e2e:bundle` builds it and drives the result in Chromium — both
+engines, checking that nothing is fetched and that 10x still lands.
+
+### When the AudioWorklet cannot be built
+
+Building the worklet needs a `blob:` URL, and some embedding contexts forbid
+those under Content-Security-Policy. Rather than let every speed above the native
+ceiling go silent, the same `StretchController` runs on the main thread behind a
+`ScriptProcessorNode` — one implementation, two hosts, so the protocol cannot
+drift. It is measurably the same: a 6-second track at 10x finishes in **0.62 s**
+without an AudioWorklet, against 0.65 s with one. `ScriptProcessorNode` is
+deprecated and shares the main thread, so it is a fallback, not a preference;
+force it with `?fallback=1`.
+
 ## Layout
 
 ```
@@ -150,7 +176,11 @@ public/
   worklets/
     stretch-processor.js         AudioWorkletProcessor around the DSP
 test/                            unit tests + fixture generator
-scripts/e2e.mjs                  browser end-to-end check
+    fallback-node.js             main-thread engine for CSP-restricted hosts
+    stretch-controller.js        window protocol, shared by both engines
+scripts/
+  bundle.mjs                     single-file build
+  e2e.mjs  e2e-large.mjs  e2e-bundle.mjs
 ```
 
 Two implementation notes worth knowing before editing:
@@ -170,6 +200,7 @@ Two implementation notes worth knowing before editing:
 npm test                 # 92 unit tests, no dependencies
 npm run test:e2e         # drives the real app in Chromium (needs playwright; skips if absent)
 npm run test:e2e:large   # generates a 1GB file and measures memory while playing it
+npm run test:e2e:bundle  # builds the single-file version and drives that
 ```
 
 The unit tests cover bencode round-tripping and malformed input, info-hash correctness against

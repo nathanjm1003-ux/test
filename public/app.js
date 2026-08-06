@@ -24,11 +24,13 @@ const state = {
 // Diagnostics, also handy on low-memory machines:
 //   ?decodeBudgetMB=N  cap the memory the time-stretching engine may use
 //   ?noStream=1        force whole-file decoding even for formats that stream
+//   ?fallback=1        force the main-thread engine instead of the AudioWorklet
 const params = new URLSearchParams(location.search);
 const budgetMB = Number(params.get('decodeBudgetMB'));
 const player = new SpeedPlayer({
   budgetBytes: Number.isFinite(budgetMB) && budgetMB > 0 ? budgetMB * 1e6 : undefined,
   preferStreaming: params.get('noStream') !== '1',
+  forceFallback: params.get('fallback') === '1',
 });
 
 // ---------------------------------------------------------------- utilities

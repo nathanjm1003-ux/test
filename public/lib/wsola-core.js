@@ -389,3 +389,8 @@ class WsolaStretcher {
     return produced;
   }
 }
+
+// A class declaration in a classic script is a lexical binding, not a property
+// of globalThis. Publish it so module code can reach it — the fallback engine
+// needs this class on the main thread.
+globalThis.WsolaStretcher = WsolaStretcher;

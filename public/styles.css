@@ -1,5 +1,45 @@
+/* Palette as tokens, so the theme can be switched by redefining them and
+   nothing else. Light is the base; dark arrives either from the OS preference
+   or from a host that stamps data-theme on the root element. The attribute
+   selectors outrank the media query, so an explicit toggle wins in both
+   directions. */
 :root {
-  color-scheme: dark light;
+  color-scheme: light;
+
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --panel-2: #f0f3f6;
+  --border: #d8dee4;
+  --text: #1f2328;
+  --muted: #616b76;
+  --accent: #0969da;
+  --accent-strong: #0757ba;
+  --ok: #1a7f37;
+  --warn: #9a6700;
+  --bad: #cf222e;
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c232d;
+    --border: #2a323d;
+    --text: #e6edf3;
+    --muted: #8b98a8;
+    --accent: #4aa3ff;
+    --accent-strong: #1f6feb;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --bad: #f85149;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
   --bg: #0e1116;
   --panel: #161b22;
@@ -12,23 +52,22 @@
   --ok: #3fb950;
   --warn: #d29922;
   --bad: #f85149;
-  --radius: 12px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f6f8fa;
-    --panel: #ffffff;
-    --panel-2: #f0f3f6;
-    --border: #d8dee4;
-    --text: #1f2328;
-    --muted: #616b76;
-    --accent: #0969da;
-    --accent-strong: #0757ba;
-    --ok: #1a7f37;
-    --warn: #9a6700;
-    --bad: #cf222e;
-  }
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --panel-2: #f0f3f6;
+  --border: #d8dee4;
+  --text: #1f2328;
+  --muted: #616b76;
+  --accent: #0969da;
+  --accent-strong: #0757ba;
+  --ok: #1a7f37;
+  --warn: #9a6700;
+  --bad: #cf222e;
 }
 
 * {
@@ -203,6 +242,15 @@ select:focus {
 
 .button:hover:not(:disabled) {
   border-color: var(--accent);
+}
+
+.button:focus-visible,
+.preset:focus-visible,
+.playlist li:focus-visible,
+.trackers summary:focus-visible,
+.advanced summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .button:disabled {
@@ -729,5 +777,12 @@ input[type="range"]:focus-visible {
 
   .meta-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

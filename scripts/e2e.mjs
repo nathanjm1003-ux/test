@@ -251,6 +251,35 @@ try {
   );
   await cappedPage.close();
 
+  // 9. The main-thread fallback, for contexts that forbid blob: worklets ------
+  const fallbackPage = await openWithFixture('?fallback=1');
+  await fallbackPage.click('.preset.top');
+  await fallbackPage.waitForFunction(
+    () => document.getElementById('engine-badge')?.textContent === 'time-stretch',
+    null,
+    { timeout: 20000 },
+  );
+  check(
+    'the fallback engine reports where it runs',
+    (await fallbackPage.getAttribute('#engine-badge', 'title')).includes('main thread'),
+    await fallbackPage.getAttribute('#engine-badge', 'title'),
+  );
+
+  const fallbackStart = Date.now();
+  await fallbackPage.click('#play-toggle');
+  await fallbackPage.waitForFunction(
+    () => document.getElementById('track-title')?.textContent === '02 - high tone.wav',
+    null,
+    { timeout: 20000 },
+  );
+  const fallbackElapsed = (Date.now() - fallbackStart) / 1000;
+  check(
+    'the fallback engine also reaches 10x',
+    fallbackElapsed > 0.15 && fallbackElapsed < 4,
+    `6s track took ${fallbackElapsed.toFixed(2)}s without an AudioWorklet`,
+  );
+  await fallbackPage.close();
+
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | ').slice(0, 300));
 } catch (error) {
   check('e2e run completed', false, error.message);

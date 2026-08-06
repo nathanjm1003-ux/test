@@ -23,9 +23,13 @@
 
 import { createAudioSource, inspectSource, TooLargeToDecodeError, DEFAULT_BUDGET_BYTES } from './sources/index.js';
 import { formatBytes } from './format.js';
+import { createFallbackNode } from './fallback-node.js';
 
-const CORE_URL = new URL('./wsola-core.js', import.meta.url);
-const PROCESSOR_URL = new URL('../worklets/stretch-processor.js', import.meta.url);
+const MODULE_PARTS = [
+  new URL('./wsola-core.js', import.meta.url),
+  new URL('./stretch-controller.js', import.meta.url),
+  new URL('../worklets/stretch-processor.js', import.meta.url),
+];
 
 /** Highest rate we will ask an <audio> element for, before probing narrows it. */
 export const NATIVE_RATE_CEILING = 4;
@@ -93,6 +97,10 @@ export class SpeedPlayer extends EventTarget {
     this.node = null;
     this.gain = null;
     this.workletReady = false;
+    /** Set when the AudioWorklet could not be built and the fallback took over. */
+    this.usingFallback = false;
+    this.workletError = null;
+    this.forceFallback = options.forceFallback === true;
     this.playing = false;
     this.decoding = false;
     this.buffering = false;
@@ -269,8 +277,10 @@ export class SpeedPlayer extends EventTarget {
 
   async teardownAudioGraph() {
     this.node?.disconnect();
+    if (this.node) this.node.onaudioprocess = null;
     this.node = null;
     this.workletReady = false;
+    this.usingFallback = false;
     this._workletToken = -1;
     this._lastWindowStart = -1;
     const context = this.context;
@@ -280,35 +290,64 @@ export class SpeedPlayer extends EventTarget {
   }
 
   /**
-   * Build the worklet module. The DSP core and the processor are fetched and
-   * concatenated into one blob because worklet modules with static imports are
-   * not dependably supported.
+   * Source text for the worklet module. A bundled single-file build embeds it
+   * (there are no separate files to fetch); otherwise the three classic scripts
+   * are fetched and concatenated, because worklet modules with static imports
+   * are not dependably supported.
    */
+  async workletModuleSource() {
+    if (typeof globalThis.__STRETCH_MODULE_SOURCE__ === 'string') {
+      return globalThis.__STRETCH_MODULE_SOURCE__;
+    }
+    const parts = await Promise.all(MODULE_PARTS.map((url) => fetch(url).then((r) => r.text())));
+    return parts.join('\n\n');
+  }
+
+  /**
+   * Build the node that does the time-stretching. Prefers an AudioWorklet; falls
+   * back to a main-thread ScriptProcessor when the worklet module cannot be
+   * built — typically a Content-Security-Policy that forbids blob: scripts.
+   * Without the fallback, every speed above the native ceiling would go silent.
+   */
+  async createStretchNode(context) {
+    if (!this.forceFallback) {
+      try {
+        if (!this.workletReady) {
+          const blob = new Blob([await this.workletModuleSource()], { type: 'text/javascript' });
+          const url = URL.createObjectURL(blob);
+          try {
+            await context.audioWorklet.addModule(url);
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+          this.workletReady = true;
+        }
+        return new AudioWorkletNode(context, 'wsola-stretch', {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [2],
+        });
+      } catch (error) {
+        this.workletError = error;
+      }
+    }
+
+    const node = createFallbackNode(context);
+    this.usingFallback = true;
+    this._emit('fallback', {
+      reason: this.forceFallback
+        ? 'forced'
+        : `AudioWorklet unavailable (${this.workletError?.message ?? 'unknown'})`,
+    });
+    return node;
+  }
+
   async ensureWorklet() {
     const source = await this.ensureSource();
     const context = await this.ensureContext(source.sampleRate);
 
-    if (!this.workletReady) {
-      const [core, processor] = await Promise.all([
-        fetch(CORE_URL).then((r) => r.text()),
-        fetch(PROCESSOR_URL).then((r) => r.text()),
-      ]);
-      const blob = new Blob([core, '\n\n', processor], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      try {
-        await context.audioWorklet.addModule(url);
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-      this.workletReady = true;
-    }
-
     if (!this.node) {
-      this.node = new AudioWorkletNode(context, 'wsola-stretch', {
-        numberOfInputs: 0,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-      });
+      this.node = await this.createStretchNode(context);
       this.node.port.onmessage = (event) => this._handleWorkletMessage(event.data);
       this.node.connect(this.gain);
     }
@@ -421,7 +460,8 @@ export class SpeedPlayer extends EventTarget {
     if (this.engine === 'native') return `${this.nativeMaxRate}x or below — using the browser's own decoder`;
     if (this.pitch !== 0) return 'pitch is shifted, which needs time-stretching';
     const how = this.source?.streaming ? 'streamed in windows' : 'decoded into memory';
-    return `above ${this.nativeMaxRate}x — time-stretching in an AudioWorklet (${how})`;
+    const where = this.usingFallback ? 'on the main thread' : 'in an AudioWorklet';
+    return `above ${this.nativeMaxRate}x — time-stretching ${where} (${how})`;
   }
 
   /** The fastest the current file can actually go. */
