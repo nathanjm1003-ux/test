@@ -1,5 +1,7 @@
 /** Shared domain types. */
 
+import type { CleanupOptions } from './lib/ocr/cleanup';
+
 /** How the text for a page was obtained. */
 export type PageSource = 'image' | 'pdf-text' | 'pdf-ocr';
 
@@ -34,6 +36,7 @@ export interface DocSettings {
 export interface Doc {
   id: string;
   title: string;
+  /** The text as the user last left it: cleaned, and possibly hand-edited. */
   text: string;
   createdAt: number;
   updatedAt: number;
@@ -42,4 +45,10 @@ export interface Doc {
   thumbnail?: string;
   position: PlaybackPosition;
   settings: Partial<DocSettings>;
+  /**
+   * Raw per-page OCR output, kept so cleanup options can be changed later
+   * without re-scanning the pages. Dropped for documents imported as text.
+   */
+  pages?: RawPage[];
+  cleanupOptions?: CleanupOptions;
 }

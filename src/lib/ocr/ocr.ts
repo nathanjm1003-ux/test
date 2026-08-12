@@ -27,6 +27,13 @@ export interface OcrPageResult {
   confidence: number;
 }
 
+/**
+ * Give up on starting the engine after this long. Without a cap, a blocked or
+ * very slow CDN leaves the user staring at a progress bar that will never move
+ * — the failure mode is silence, which is the worst kind.
+ */
+const ENGINE_START_TIMEOUT_MS = 45_000;
+
 /** Tesseract's internal status strings are terse; map the ones users see. */
 const STAGE_LABELS: Record<string, string> = {
   'loading tesseract core': 'Loading OCR engine',
@@ -87,6 +94,16 @@ function hasVendoredEngine(): Promise<boolean> {
   return vendored;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`timed out after ${Math.round(ms / 1000)}s`)),
+      ms,
+    );
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
 function getWorker(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = (async () => {
@@ -97,7 +114,7 @@ function getWorker(): Promise<Worker> {
             'Run `npm run build` with a network connection to make OCR work offline.',
         );
       }
-      return spawn(selfHosted);
+      return withTimeout(spawn(selfHosted), ENGINE_START_TIMEOUT_MS);
     })().catch((err: unknown) => {
       workerPromise = null; // let the next attempt retry from scratch
       throw new Error(
@@ -128,9 +145,20 @@ export async function recognizePages(
   onProgress: (p: OcrProgress) => void,
   signal?: AbortSignal,
 ): Promise<OcrPageResult[]> {
+  const pageCount = canvases.length;
+
+  // Starting the engine can take a while on first run (it downloads ~4 MB), and
+  // Tesseract's own logger stays quiet until it has begun — so say something.
+  onProgress({
+    stage: 'Starting the OCR engine',
+    pageIndex: 0,
+    pageCount,
+    pageProgress: 0,
+    overall: 0,
+  });
+
   const worker = await getWorker();
   const results: OcrPageResult[] = [];
-  const pageCount = canvases.length;
 
   for (let i = 0; i < pageCount; i++) {
     if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');

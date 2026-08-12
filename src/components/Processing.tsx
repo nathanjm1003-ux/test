@@ -23,9 +23,11 @@ export function Processing({
           {progress.label}
         </p>
         <p className="text-xs text-ink-faint">
-          {progress.phase === 'ocr'
-            ? 'Recognising text on your device — no upload, no account.'
-            : 'Preparing your pages…'}
+          {progress.phase !== 'ocr'
+            ? 'Preparing your pages…'
+            : progress.label.startsWith('Reading page')
+              ? 'Recognising text on your device — no upload, no account.'
+              : 'First run only: fetching the recogniser, about 4 MB. After this it works offline.'}
         </p>
       </div>
 

@@ -51,32 +51,42 @@ export function ReaderScreen(props: Props) {
 
   const { state, seek } = player;
 
-  // Persist the position, throttled.
+  /**
+   * Always-current view of the things the unmount handler needs. Without this,
+   * the cleanup closure below would capture the *first* render's state and
+   * "save" position 0 on the way out, wiping the real position.
+   */
+  const latest = useRef({ state, doc, onPosition: props.onPosition });
+  latest.current = { state, doc, onPosition: props.onPosition };
+
+  const positionAt = (tokenIndex: number): PlaybackPosition => ({
+    tokenIndex,
+    charIndex: latest.current.doc.tokens[tokenIndex]?.start ?? 0,
+    updatedAt: Date.now(),
+  });
+
+  // Persist the position as it moves, throttled so a word boundary three times
+  // a second doesn't become three IndexedDB writes a second.
   const lastSave = useRef(0);
   useEffect(() => {
     if (!props.onPosition) return;
     const now = Date.now();
     if (now - lastSave.current < POSITION_SAVE_MS) return;
     lastSave.current = now;
-    props.onPosition({
-      tokenIndex: state.tokenIndex,
-      charIndex: doc.tokens[state.tokenIndex]?.start ?? 0,
-      updatedAt: now,
-    });
+    props.onPosition(positionAt(state.tokenIndex));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.tokenIndex]);
 
-  // ...and once more on the way out, so leaving mid-sentence resumes exactly.
-  useEffect(() => {
-    return () => {
-      props.onPosition?.({
-        tokenIndex: player.state.tokenIndex,
-        charIndex: doc.tokens[player.state.tokenIndex]?.start ?? 0,
-        updatedAt: Date.now(),
-      });
-    };
+  // ...and once more on the way out, so leaving mid-sentence resumes exactly
+  // (this is also what catches the position between throttled saves).
+  useEffect(
+    () => () => {
+      const { state: last, onPosition } = latest.current;
+      onPosition?.(positionAt(last.tokenIndex));
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [],
+  );
 
   // Keep the last-used voice/speed as the default for the next document.
   useEffect(() => {

@@ -1,9 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Capture, type PickedFile } from './components/Capture';
-import { ReaderScreen } from './components/ReaderScreen';
+import { Library } from './components/Library';
 import { Processing } from './components/Processing';
+import { ReaderScreen } from './components/ReaderScreen';
 import { TextEditor } from './components/TextEditor';
-import { Button, LibraryIcon, PlusIcon } from './components/ui';
+import { useLibrary } from './hooks/useLibrary';
+import { usePrefs } from './hooks/usePrefs';
+import { uid } from './lib/id';
 import {
   defaultCleanupOptions,
   type CleanupOptions,
@@ -15,25 +18,9 @@ import {
   recleanPages,
   type IngestProgress,
 } from './lib/ocr/ingest';
-import { usePrefs } from './hooks/usePrefs';
-import { uid } from './lib/id';
-import type { PlaybackPosition, RawPage } from './types';
+import type { Doc } from './types';
 
-type View = 'home' | 'capture' | 'processing' | 'edit' | 'read';
-
-/** A document being created, before it is saved to the library. */
-interface Draft {
-  id: string;
-  title: string;
-  text: string;
-  pages: RawPage[];
-  report: CleanupReport;
-  thumbnail?: string;
-  options: CleanupOptions;
-  /** The user has hand-edited the text; re-cleaning would discard it. */
-  dirty: boolean;
-  position: PlaybackPosition;
-}
+type View = 'library' | 'capture' | 'processing' | 'edit' | 'read';
 
 const EMPTY_PROGRESS: IngestProgress = {
   phase: 'preparing',
@@ -41,20 +28,37 @@ const EMPTY_PROGRESS: IngestProgress = {
   progress: 0,
 };
 
+const EMPTY_REPORT: CleanupReport = { removed: [], hyphensJoined: 0, linesUnwrapped: 0 };
+
+/** Wait this long after the last keystroke before writing an edit to storage. */
+const AUTOSAVE_MS = 1000;
+
 export function App() {
   const [prefs, setPrefs] = usePrefs();
-  const [view, setView] = useState<View>('home');
+  const library = useLibrary();
+
+  const [view, setView] = useState<View>('library');
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [progress, setProgress] = useState<IngestProgress>(EMPTY_PROGRESS);
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /** The document currently being edited or listened to. */
+  const [active, setActive] = useState<Doc | null>(null);
+  /** Cleanup report for `active` — recomputed on demand rather than stored. */
+  const [report, setReport] = useState<CleanupReport>(EMPTY_REPORT);
+  /** The user has hand-edited the text since the last cleanup run. */
+  const [dirty, setDirty] = useState(false);
+
   const abortRef = useRef<AbortController | null>(null);
+  const saveTimer = useRef<number | null>(null);
+
+  // --- creating a document --------------------------------------------------
 
   const startCapture = () => {
     setError(null);
     setFiles([]);
     setView('capture');
-    // Start downloading the OCR engine while the user is still picking pages.
+    // Start fetching the OCR engine while the user is still picking pages.
     void import('./lib/ocr/ocr').then((m) => m.warmUpOcr());
   };
 
@@ -73,17 +77,28 @@ export function App() {
         defaultCleanupOptions,
         controller.signal,
       );
-      setDraft({
+
+      const now = Date.now();
+      const doc: Doc = {
         id: uid('doc'),
         title: guessTitle(result.text, files[0].file.name.replace(/\.[^.]+$/, '')),
         text: result.text,
-        pages: result.pages,
-        report: result.report,
+        createdAt: now,
+        updatedAt: now,
+        pageCount: result.pages.length,
         thumbnail: result.thumbnail,
-        options: defaultCleanupOptions,
-        dirty: false,
-        position: { tokenIndex: 0, charIndex: 0, updatedAt: Date.now() },
-      });
+        position: { tokenIndex: 0, charIndex: 0, updatedAt: now },
+        settings: { engineId: prefs.engineId, voiceId: prefs.voiceId, rate: prefs.rate },
+        pages: result.pages,
+        cleanupOptions: defaultCleanupOptions,
+      };
+
+      // Saved straight away: OCR is the expensive part, and losing it to a
+      // stray back-navigation would be infuriating.
+      void library.save(doc);
+      setActive(doc);
+      setReport(result.report);
+      setDirty(false);
       setView('edit');
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
@@ -99,88 +114,142 @@ export function App() {
     } finally {
       abortRef.current = null;
     }
-  }, [files]);
+  }, [files, library, prefs]);
 
-  const changeOptions = (options: CleanupOptions) => {
-    if (!draft) return;
-    const { text, report } = recleanPages(draft.pages, options);
-    setDraft({ ...draft, options, text, report, dirty: false });
+  // --- editing --------------------------------------------------------------
+
+  /** Update the working document and schedule a save. */
+  const patchActive = useCallback(
+    (patch: Partial<Doc>) => {
+      setActive((current) => {
+        if (!current) return current;
+        const next = { ...current, ...patch, updatedAt: Date.now() };
+        if (saveTimer.current !== null) clearTimeout(saveTimer.current);
+        saveTimer.current = window.setTimeout(() => void library.save(next), AUTOSAVE_MS);
+        return next;
+      });
+    },
+    [library],
+  );
+
+  /** Write any pending edit immediately — called when leaving the editor. */
+  const flushSave = useCallback(() => {
+    if (saveTimer.current === null) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    if (active) void library.save(active);
+  }, [active, library]);
+
+  useEffect(
+    () => () => {
+      if (saveTimer.current !== null) clearTimeout(saveTimer.current);
+    },
+    [],
+  );
+
+  const changeCleanupOptions = (options: CleanupOptions) => {
+    if (!active?.pages) return;
+    const result = recleanPages(active.pages, options);
+    setReport(result.report);
+    setDirty(false);
+    patchActive({ text: result.text, cleanupOptions: options });
   };
+
+  const openDoc = (doc: Doc) => {
+    setActive(doc);
+    setReport(doc.pages ? recleanPages(doc.pages, doc.cleanupOptions).report : EMPTY_REPORT);
+    setDirty(false);
+    setView('read');
+  };
+
+  const leaveToLibrary = () => {
+    flushSave();
+    setActive(null);
+    setView('library');
+    // Deliberately no re-read from IndexedDB here: the reader saves its final
+    // position from its unmount handler, which runs *after* this. A refresh
+    // would race that write and show a stale position.
+  };
+
+  const errorBanner = error && (
+    <div className="mx-auto max-w-2xl px-4 pt-4">
+      <p className="rounded-xl border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
+        {error}
+      </p>
+    </div>
+  );
+
+  // --- render ---------------------------------------------------------------
 
   return (
     <div className="min-h-dvh">
-      {view === 'home' && (
-        <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-6 px-6 text-center">
-          <LibraryIcon className="h-12 w-12 text-ink-faint" />
-          <div>
-            <h1 className="text-2xl font-semibold">Page to Voice</h1>
-            <p className="mt-2 text-sm text-ink-soft">
-              Photograph a book page and listen to it, with every word
-              highlighted as it is read.
-            </p>
-          </div>
-          {error && <p className="text-sm text-danger">{error}</p>}
-          <Button variant="primary" onClick={startCapture}>
-            <PlusIcon /> New document
-          </Button>
+      {view === 'library' && (
+        <main>
+          {errorBanner}
+          <Library
+            docs={library.docs}
+            loading={library.loading}
+            error={library.error}
+            onOpen={openDoc}
+            onDelete={(id) => void library.remove(id)}
+            onNew={startCapture}
+          />
         </main>
       )}
 
       {view === 'capture' && (
         <main>
-          {error && (
-            <div className="mx-auto max-w-2xl px-4 pt-4">
-              <p className="rounded-xl border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
-                {error}
-              </p>
-            </div>
-          )}
+          {errorBanner}
           <Capture
             files={files}
             onChange={setFiles}
             onExtract={runIngest}
-            onCancel={() => setView('home')}
+            onCancel={() => setView('library')}
           />
         </main>
       )}
 
       {view === 'processing' && (
-        <Processing
-          progress={progress}
-          onCancel={() => abortRef.current?.abort()}
-        />
+        <Processing progress={progress} onCancel={() => abortRef.current?.abort()} />
       )}
 
-      {view === 'edit' && draft && (
+      {view === 'edit' && active && (
         <main>
           <TextEditor
-            title={draft.title}
-            onTitleChange={(title) => setDraft({ ...draft, title })}
-            text={draft.text}
-            onTextChange={(text) => setDraft({ ...draft, text, dirty: true })}
-            pages={draft.pages}
-            report={draft.report}
-            options={draft.options}
-            onOptionsChange={changeOptions}
-            dirty={draft.dirty}
-            onBack={() => setView('capture')}
-            onListen={() => setView('read')}
+            title={active.title}
+            onTitleChange={(title) => patchActive({ title })}
+            text={active.text}
+            onTextChange={(text) => {
+              setDirty(true);
+              patchActive({ text });
+            }}
+            pages={active.pages ?? []}
+            report={report}
+            options={active.cleanupOptions ?? defaultCleanupOptions}
+            onOptionsChange={changeCleanupOptions}
+            dirty={dirty}
+            onBack={leaveToLibrary}
+            onListen={() => {
+              flushSave();
+              setView('read');
+            }}
           />
         </main>
       )}
 
-      {view === 'read' && draft && (
+      {view === 'read' && active && (
         <ReaderScreen
-          title={draft.title}
-          text={draft.text}
-          position={draft.position}
+          title={active.title}
+          text={active.text}
+          position={active.position}
           prefs={prefs}
           onPrefs={setPrefs}
-          onBack={() => setView('home')}
+          onBack={leaveToLibrary}
           onEdit={() => setView('edit')}
-          onPosition={(position) =>
-            setDraft((d) => (d ? { ...d, position } : d))
-          }
+          onPosition={(position) => {
+            setActive((current) => (current ? { ...current, position } : current));
+            library.savePosition(active.id, position);
+          }}
         />
       )}
     </div>
