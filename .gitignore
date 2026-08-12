@@ -6,3 +6,4 @@ dist-ssr
 .vite
 public/pdfjs
 public/tesseract
+dist-artifact
