@@ -20,9 +20,22 @@ file input, so it works over plain `http://` on the LAN.
 
 ```bash
 npm run build    # production build into dist/
-npm run preview  # serve dist/ locally
+npm run preview  # serve dist/, also reachable from your phone
 npm test         # cleanup + playback logic (39 assertions, no test framework)
 ```
+
+### Scanning from a phone
+
+Both servers bind to your LAN, so open `http://<your-computer's-ip>:5173`
+(dev) or `:4173` (preview) on the phone — `npm run dev` prints the address as
+"Network". No HTTPS needed: camera capture uses a file input with
+`capture="environment"`, not `getUserMedia`, so it works over plain `http://`.
+
+Tap **Take photo**, shoot the page, and it goes straight into OCR. For a clean
+read: fill the frame with the page, hold the camera square rather than at an
+angle, flatten the spine, and avoid a hard shadow across the text. Low
+confidence is flagged in the editor so you know when to re-shoot rather than
+hand-correcting a bad scan.
 
 `npm install` and the first `npm run dev` will fetch about 4 MB of OCR language
 data into `public/tesseract/` (git-ignored). If that download fails the app

@@ -9,6 +9,9 @@ export default defineConfig({
     // same Wi-Fi network (scanning happens on a phone).
     host: true,
   },
+  // Same for `npm run preview` — that is the build that has the OCR engine
+  // vendored into public/, so it is the one to test scanning against.
+  preview: { host: true },
   worker: { format: 'es' },
   optimizeDeps: {
     // pdf.js ships ESM with a separate worker entry; let Vite prebundle it.
