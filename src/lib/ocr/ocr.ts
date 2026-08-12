@@ -40,25 +40,70 @@ let workerPromise: Promise<Worker> | null = null;
 /** Set by the active batch so the shared worker's logger can report progress. */
 let activeLogger: ((status: string, progress: number) => void) | null = null;
 
+/**
+ * Absolute URLs for the self-hosted engine (see scripts/copy-assets.mjs).
+ * Absolute rather than relative because Tesseract loads its worker through a
+ * Blob URL, where a relative path would resolve against the wrong base.
+ */
+const local = (path: string) =>
+  new URL(`${import.meta.env.BASE_URL}${path}`, window.location.href).href;
+
+async function spawn(selfHosted: boolean): Promise<Worker> {
+  const worker = await createWorker(
+    'eng',
+    1,
+    selfHosted
+      ? {
+          logger: (m) => activeLogger?.(m.status, m.progress),
+          workerPath: local('tesseract/worker.min.js'),
+          corePath: local('tesseract/'),
+          langPath: local('tesseract/lang'),
+        }
+      : // Fall back to Tesseract's own CDN, which is its default.
+        { logger: (m) => activeLogger?.(m.status, m.progress) },
+  );
+  // PSM.AUTO handles a single column of prose, which is what a book page is.
+  // SINGLE_BLOCK does worse on pages with a drop cap or an epigraph.
+  await worker.setParameters({
+    tessedit_pageseg_mode: PSM.AUTO,
+    preserve_interword_spaces: '1',
+  });
+  return worker;
+}
+
+/**
+ * Is the vendored engine actually there?
+ *
+ * scripts/copy-assets.mjs downloads the language data on a best-effort basis,
+ * so it may be absent. We check with one HEAD request rather than letting
+ * `createWorker` fail and retrying: a failed Tesseract init leaves its internal
+ * job registry in a state where the *next* attempt throws something unrelated.
+ */
+let vendored: Promise<boolean> | null = null;
+function hasVendoredEngine(): Promise<boolean> {
+  vendored ??= fetch(local('tesseract/lang/eng.traineddata.gz'), { method: 'HEAD' })
+    .then((res) => res.ok)
+    .catch(() => false);
+  return vendored;
+}
+
 function getWorker(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = (async () => {
-      const worker = await createWorker('eng', 1, {
-        logger: (m) => activeLogger?.(m.status, m.progress),
-        // NOTE: by default the WASM core and `eng.traineddata` are fetched from
-        // a CDN (jsDelivr) at runtime. To make the app fully offline, copy
-        // those files into /public and set `corePath` / `langPath` here.
-      });
-      // PSM.AUTO handles a single column of prose, which is what a book page
-      // is. SINGLE_BLOCK is worse on pages with a drop cap or an epigraph.
-      await worker.setParameters({
-        tessedit_pageseg_mode: PSM.AUTO,
-        preserve_interword_spaces: '1',
-      });
-      return worker;
-    })().catch((err) => {
+      const selfHosted = await hasVendoredEngine();
+      if (!selfHosted) {
+        console.info(
+          'OCR language data is not vendored locally; using the Tesseract CDN. ' +
+            'Run `npm run build` with a network connection to make OCR work offline.',
+        );
+      }
+      return spawn(selfHosted);
+    })().catch((err: unknown) => {
       workerPromise = null; // let the next attempt retry from scratch
-      throw err;
+      throw new Error(
+        'Could not start the OCR engine. It needs to download about 4 MB the ' +
+          `first time — check your connection and try again. (${(err as Error).message})`,
+      );
     });
   }
   return workerPromise;

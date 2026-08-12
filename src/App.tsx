@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Capture, type PickedFile } from './components/Capture';
+import { ReaderScreen } from './components/ReaderScreen';
 import { Processing } from './components/Processing';
 import { TextEditor } from './components/TextEditor';
 import { Button, LibraryIcon, PlusIcon } from './components/ui';
@@ -14,10 +15,11 @@ import {
   recleanPages,
   type IngestProgress,
 } from './lib/ocr/ingest';
+import { usePrefs } from './hooks/usePrefs';
 import { uid } from './lib/id';
-import type { RawPage } from './types';
+import type { PlaybackPosition, RawPage } from './types';
 
-type View = 'home' | 'capture' | 'processing' | 'edit';
+type View = 'home' | 'capture' | 'processing' | 'edit' | 'read';
 
 /** A document being created, before it is saved to the library. */
 interface Draft {
@@ -30,6 +32,7 @@ interface Draft {
   options: CleanupOptions;
   /** The user has hand-edited the text; re-cleaning would discard it. */
   dirty: boolean;
+  position: PlaybackPosition;
 }
 
 const EMPTY_PROGRESS: IngestProgress = {
@@ -39,6 +42,7 @@ const EMPTY_PROGRESS: IngestProgress = {
 };
 
 export function App() {
+  const [prefs, setPrefs] = usePrefs();
   const [view, setView] = useState<View>('home');
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [progress, setProgress] = useState<IngestProgress>(EMPTY_PROGRESS);
@@ -78,6 +82,7 @@ export function App() {
         thumbnail: result.thumbnail,
         options: defaultCleanupOptions,
         dirty: false,
+        position: { tokenIndex: 0, charIndex: 0, updatedAt: Date.now() },
       });
       setView('edit');
     } catch (err) {
@@ -159,9 +164,24 @@ export function App() {
             onOptionsChange={changeOptions}
             dirty={draft.dirty}
             onBack={() => setView('capture')}
-            onListen={() => alert('Playback lands in phase 2.')}
+            onListen={() => setView('read')}
           />
         </main>
+      )}
+
+      {view === 'read' && draft && (
+        <ReaderScreen
+          title={draft.title}
+          text={draft.text}
+          position={draft.position}
+          prefs={prefs}
+          onPrefs={setPrefs}
+          onBack={() => setView('home')}
+          onEdit={() => setView('edit')}
+          onPosition={(position) =>
+            setDraft((d) => (d ? { ...d, position } : d))
+          }
+        />
       )}
     </div>
   );

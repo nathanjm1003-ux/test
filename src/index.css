@@ -87,13 +87,19 @@ body {
   margin: 0 -0.06em; /* cancel the padding so word spacing stays natural */
   transition: background-color 90ms linear;
 }
-.tok-active {
-  background-color: var(--c-word);
-  color: var(--c-word-ink);
-}
 .sent-active {
   background-color: var(--c-sentence);
   border-radius: 0.35rem;
+  /* Keep the shading continuous when a sentence wraps across lines. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0.08em 0;
+}
+/* Declared after .sent-active so the spoken word always wins the background. */
+.tok-active {
+  background-color: var(--c-word);
+  color: var(--c-word-ink);
+  font-weight: 600;
 }
 
 @media (prefers-reduced-motion: reduce) {
