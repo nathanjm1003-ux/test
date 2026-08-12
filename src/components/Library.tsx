@@ -5,9 +5,12 @@ import {
   Button,
   Card,
   FileIcon,
+  IconButton,
   LibraryIcon,
+  MoonIcon,
   PlayIcon,
   PlusIcon,
+  SunIcon,
   TrashIcon,
 } from './ui';
 import { storageUsed } from '../lib/db/idb';
@@ -21,6 +24,8 @@ interface Props {
   onOpen: (doc: Doc) => void;
   onDelete: (id: string) => void;
   onNew: () => void;
+  theme: 'dark' | 'light';
+  onTheme: (t: 'dark' | 'light') => void;
 }
 
 function relativeTime(ts: number): string {
@@ -38,7 +43,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function Library({ docs, loading, error, onOpen, onDelete, onNew }: Props) {
+export function Library({
+  docs,
+  loading,
+  error,
+  onOpen,
+  onDelete,
+  onNew,
+  theme,
+  onTheme,
+}: Props) {
   const [used, setUsed] = useState<number>();
   const [confirming, setConfirming] = useState<string | null>(null);
 
@@ -50,9 +64,17 @@ export function Library({ docs, loading, error, onOpen, onDelete, onNew }: Props
     <div className="mx-auto w-full max-w-2xl px-4 pb-28">
       <header className="flex items-center justify-between py-5 safe-top">
         <h1 className="text-xl font-semibold">Page to Voice</h1>
-        <Button variant="primary" onClick={onNew}>
-          <PlusIcon /> New
-        </Button>
+        <div className="flex items-center gap-1">
+          <IconButton
+            label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </IconButton>
+          <Button variant="primary" onClick={onNew}>
+            <PlusIcon /> New
+          </Button>
+        </div>
       </header>
 
       {error && (

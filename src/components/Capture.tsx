@@ -24,6 +24,12 @@ interface Props {
   onCancel?: () => void;
 }
 
+/** A PDF can hold many pages, so count files here, not pages. */
+const formatSize = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} kB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
 const makePicked = (file: File): PickedFile => ({
   id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
   file,
@@ -151,7 +157,7 @@ export function Capture({ files, onChange, onExtract, onCancel }: Props) {
       {files.length > 0 && (
         <section className="mt-5">
           <h2 className="mb-2 text-sm font-medium text-ink-soft">
-            {files.length} page{files.length === 1 ? '' : 's'} — they will be read in this order
+            {files.length} file{files.length === 1 ? '' : 's'} — they will be read in this order
           </h2>
           <ul className="space-y-2">
             {files.map((f, i) => (
@@ -171,7 +177,8 @@ export function Capture({ files, onChange, onExtract, onCancel }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm">{f.file.name}</p>
                     <p className="text-xs text-ink-faint">
-                      {(f.file.size / 1024 / 1024).toFixed(1)} MB
+                      {formatSize(f.file.size)}
+                      {f.file.type === 'application/pdf' && ' · all pages'}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">
@@ -210,7 +217,7 @@ export function Capture({ files, onChange, onExtract, onCancel }: Props) {
         <div className="fixed inset-x-0 bottom-0 border-t border-border bg-bg/95 px-4 pt-3 backdrop-blur safe-bottom">
           <div className="mx-auto max-w-2xl">
             <Button variant="primary" full onClick={onExtract}>
-              Extract text from {files.length} page{files.length === 1 ? '' : 's'}
+              Extract text from {files.length} file{files.length === 1 ? '' : 's'}
             </Button>
           </div>
         </div>

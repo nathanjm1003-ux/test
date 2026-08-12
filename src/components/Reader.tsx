@@ -169,9 +169,10 @@ export function Reader({
   return (
     <div className="relative">
       <article
-        className="font-reader leading-[1.75] text-ink"
+        // When nothing is playing the highlight is a cursor showing where Play
+        // will start, so it is toned down; at full strength it reads as a bug.
+        className={`font-reader leading-[1.75] text-ink${playing ? '' : ' reader-idle'}`}
         style={{ fontSize }}
-        // Selecting text is what a mouse drag should do; tapping seeks.
       >
         {paragraphs.map((p) => (
           <ParagraphView

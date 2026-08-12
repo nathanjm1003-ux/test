@@ -93,7 +93,12 @@ export function TextEditor(props: Props) {
           aria-label="Document title"
           className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-base font-semibold outline-none focus:bg-surface-2"
         />
-        <Button variant="primary" onClick={props.onListen} disabled={!text.trim()}>
+        <Button
+          variant="primary"
+          className="shrink-0"
+          onClick={props.onListen}
+          disabled={!text.trim()}
+        >
           <SpeakerIcon /> Listen
         </Button>
       </header>

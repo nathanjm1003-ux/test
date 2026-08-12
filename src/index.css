@@ -102,6 +102,12 @@ body {
   font-weight: 600;
 }
 
+/* Idle: the active word marks where playback will resume, not where it is. */
+.reader-idle .tok-active {
+  background-color: color-mix(in srgb, var(--c-word) 45%, transparent);
+  color: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tok {
     transition: none;

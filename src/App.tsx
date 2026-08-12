@@ -193,6 +193,8 @@ export function App() {
             onOpen={openDoc}
             onDelete={(id) => void library.remove(id)}
             onNew={startCapture}
+            theme={prefs.theme}
+            onTheme={(theme) => setPrefs({ theme })}
           />
         </main>
       )}
