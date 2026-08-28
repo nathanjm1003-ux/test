@@ -99,6 +99,58 @@ fitness bar per generation. The simulation is deterministic — the same
 parameters always yield the same trajectory — and `evolve` is reproducible
 per seed.
 
+### Everything is editable
+
+The body, the goal and the physics are all data, not code.
+
+A **body** is node positions plus `(a, b, is_muscle)` edges; rest lengths
+come from the geometry, so a spring starts relaxed. Definitions that
+couldn't be simulated (self-loops, duplicate springs, nodes below the
+floor) raise `MorphologyError` rather than failing later:
+
+```python
+from agent_sandbox import custom_morphology
+
+tripod = custom_morphology("tripod",
+    [(0.4, 0.05, 0), (-0.2, 0.05, 0.35), (-0.2, 0.05, -0.35), (0, 0.6, 0)],
+    [(0, 3, True), (1, 3, True), (2, 3, True),      # three muscle legs
+     (0, 1, False), (1, 2, False), (2, 0, False)])  # a rigid base
+```
+
+A **goal** is weights over measured terms of the trajectory — `forward`,
+`lateral`, `sideways`, `travel`, `peak_height`, `mean_height`,
+`final_height`, `to_target`, `effort`. Weights carry the sign, so a
+penalty is a negative weight, and the built-in goals are just weight sets
+(`walk` is `forward=1, sideways=-0.3`). A new objective needs no new code:
+
+```python
+from agent_sandbox import GoalSpec
+
+efficient = GoalSpec({"forward": 1.0, "effort": -0.5}, name="walk cheaply")
+hop = GoalSpec({"peak_height": 1.0, "travel": -1.0}, name="hop in place")
+```
+
+**Physics** is a frozen `Physics` record you pass per run — gravity,
+stiffness, damping, ground friction, bounce, timestep:
+
+```python
+from agent_sandbox import Physics, rollout
+rollout(tripod, ctrl, physics=Physics(gravity=1.6))   # lunar
+```
+
+An **`Experiment`** bundles body, goal, physics and controller, and
+round-trips through one JSON file that the Gait Lab page also reads and
+writes:
+
+```python
+from agent_sandbox import Experiment, save_experiment, load_experiment
+
+exp = Experiment(morphology=tripod, goal=efficient, physics=Physics(gravity=6.0))
+report = exp.evolve(generations=30, seed=0)
+exp.controller = report.best
+save_experiment(exp, "tripod.json")
+```
+
 ## Testing tool-using agents
 
 ```python

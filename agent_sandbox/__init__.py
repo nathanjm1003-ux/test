@@ -23,12 +23,21 @@ from agent_sandbox.agent import Agent, RandomAgent
 from agent_sandbox.creature import (
     CreatureSim,
     EvolutionReport,
+    Experiment,
+    GoalSpec,
+    Morphology,
+    MorphologyError,
     MuscleController,
+    Physics,
+    custom_morphology,
     evolve,
     fitness,
+    load_experiment,
     make_goal,
     make_morphology,
+    register_morphology,
     rollout,
+    save_experiment,
 )
 from agent_sandbox.environment import Environment, StepResult, make, register
 from agent_sandbox.harness import EpisodeResult, EvalReport, evaluate, run_episode
@@ -66,6 +75,15 @@ __all__ = [
     "rollout",
     "make_morphology",
     "make_goal",
+    "Morphology",
+    "MorphologyError",
+    "custom_morphology",
+    "register_morphology",
+    "GoalSpec",
+    "Physics",
+    "Experiment",
+    "save_experiment",
+    "load_experiment",
 ]
 
 __version__ = "0.1.0"
