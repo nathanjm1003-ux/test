@@ -66,6 +66,39 @@ agent.epsilon = 0.0                     # act greedily
 print(run_episode(agent, env, seed=3).total_reward)
 ```
 
+## 3D movement simulator
+
+`agent_sandbox.creature` simulates creatures built from point masses joined
+by springs. Springs marked as *muscles* have an oscillating rest length:
+
+    L_i(t) = L0_i * (1 + amp_i * sin(2*pi*freq*t + phase_i))
+
+so a controller is one global `freq` plus a per-muscle `amp` and `phase`.
+Rhythmic contraction pushing against ground friction is what produces
+locomotion — nothing about walking is hard-coded.
+
+Three body plans ship in `MORPHOLOGIES`: `blob` (tetrahedron, 6 muscles),
+`quadruped` (rigid body on four muscle legs, 12 muscles), and `worm`
+(zig-zag chain that inches along, 9 muscles). Set the parameters by hand,
+or hand `evolve()` a goal — `walk`, `jump`, `stand`, or `reach:X,Z` — and
+let a (mu, lambda) evolution strategy search for them:
+
+```python
+from agent_sandbox import evolve, make_goal, make_morphology, rollout, save_agent
+
+morph = make_morphology("quadruped")
+report = evolve(morph, make_goal("walk"), generations=30, population=20, seed=0)
+
+traj = rollout(morph, report.best)
+print(f"walked {traj.final[0] - traj.start[0]:.2f} m")
+save_agent(report.best, "walker.json")     # trained creatures are persistable
+```
+
+`examples/evolve_walker.py` runs this from the command line with a live
+fitness bar per generation. The simulation is deterministic — the same
+parameters always yield the same trajectory — and `evolve` is reproducible
+per seed.
+
 ## Testing tool-using agents
 
 ```python

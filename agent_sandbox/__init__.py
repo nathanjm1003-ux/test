@@ -12,9 +12,24 @@ The sandbox has three pillars:
 For tool-using (LLM-style) agents, ``agent_sandbox.tools`` provides a
 ``ToolSandbox`` that records every call, enforces call budgets, and
 blocks unregistered tools.
+
+For continuous control, ``agent_sandbox.creature`` is a 3D mass-spring
+movement simulator: creatures are point masses joined by springs, some of
+which are muscles driven by control parameters, and :func:`evolve`
+searches those parameters for a goal such as walking or jumping.
 """
 
 from agent_sandbox.agent import Agent, RandomAgent
+from agent_sandbox.creature import (
+    CreatureSim,
+    EvolutionReport,
+    MuscleController,
+    evolve,
+    fitness,
+    make_goal,
+    make_morphology,
+    rollout,
+)
 from agent_sandbox.environment import Environment, StepResult, make, register
 from agent_sandbox.harness import EpisodeResult, EvalReport, evaluate, run_episode
 from agent_sandbox.persistence import load_agent, save_agent
@@ -43,6 +58,14 @@ __all__ = [
     "ToolCall",
     "ToolBudgetExceeded",
     "ToolNotAllowed",
+    "CreatureSim",
+    "MuscleController",
+    "EvolutionReport",
+    "evolve",
+    "fitness",
+    "rollout",
+    "make_morphology",
+    "make_goal",
 ]
 
 __version__ = "0.1.0"
