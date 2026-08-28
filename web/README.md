@@ -33,3 +33,23 @@ Saving a file from a published Artifact requires the `downloads` runtime
 capability (`capabilities: {downloads: true}` at publish time) — a plain
 `<a download>` link is inert inside the artifact viewer. The page detects
 whether the capability is available and disables the button if not.
+
+## Editing the experiment
+
+The page's left rail has three editors, all of which round-trip through the
+same `Experiment` JSON the Python package reads:
+
+- **Body** — the node and spring tables. Edit coordinates, add or delete
+  nodes and springs, and toggle any spring into a muscle. Definitions that
+  couldn't be simulated are rejected with the reason, and the stage keeps
+  showing the last body that worked. Hovering a row highlights that node or
+  muscle on the stage.
+- **Goal** — weights over nine measured terms of the trajectory. The four
+  built-in goals are just weight sets you can load and then change; the
+  live formula at the bottom shows what is being optimised.
+- **World** — gravity, stiffness, damping, node mass, ground grip,
+  bounciness and air drag, plus episode length and the search settings.
+
+Bodies edited away from a shipped starting point are renamed (for example
+`quadruped-edited`), and the trained example gaits are hidden for them,
+since those controllers were evolved against the original geometry.
