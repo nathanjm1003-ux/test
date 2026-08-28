@@ -1,0 +1,1298 @@
+<title>Gait Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ---- tokens: light is the base, both dark states re-declare the same names ---- */
+:root {
+  --ground: #e9edea;
+  --surface: #fcfdfc;
+  --surface-2: #f2f5f2;
+  --line: #d3dad6;
+  --line-soft: #e3e8e5;
+  --ink: #101a18;
+  --ink-2: #3f4e4a;
+  --ink-3: #6d7d78;
+  --accent: #008a76;
+  --accent-ink: #ffffff;
+  --contract: #c8451f;
+  --extend: #0b82c4;
+  --stage-sky-1: #eef3f0;
+  --stage-sky-2: #f8fbf9;
+  --stage-floor: #d6dfda;
+  --stage-grid: #a4b2ac;
+  --stage-grid-major: #7d8d87;
+  --bone: #cfc7b6;
+  --bone-dark: #8d8676;
+  --shadow: rgba(16, 26, 24, 0.18);
+  --focus: #008a76;
+  --track: #d9e0dc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0a1211;
+    --surface: #101a18;
+    --surface-2: #16211f;
+    --line: #24322f;
+    --line-soft: #1b2725;
+    --ink: #e6ede9;
+    --ink-2: #a6b5b0;
+    --ink-3: #7b8a85;
+    --accent: #17a48c;
+    --accent-ink: #04211c;
+    --contract: #e2653a;
+    --extend: #3a93d2;
+    --stage-sky-1: #060d0c;
+    --stage-sky-2: #0d1716;
+    --stage-floor: #17231f;
+    --stage-grid: #33443f;
+    --stage-grid-major: #52655f;
+    --bone: #b5ad9c;
+    --bone-dark: #6d6659;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --focus: #3fd0b4;
+    --track: #24322f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0a1211;
+  --surface: #101a18;
+  --surface-2: #16211f;
+  --line: #24322f;
+  --line-soft: #1b2725;
+  --ink: #e6ede9;
+  --ink-2: #a6b5b0;
+  --ink-3: #7b8a85;
+  --accent: #17a48c;
+  --accent-ink: #04211c;
+  --contract: #e2653a;
+  --extend: #3a93d2;
+  --stage-sky-1: #060d0c;
+  --stage-sky-2: #0d1716;
+  --stage-floor: #17231f;
+  --stage-grid: #33443f;
+  --stage-grid-major: #52655f;
+  --bone: #b5ad9c;
+  --bone-dark: #6d6659;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --focus: #3fd0b4;
+  --track: #24322f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif; margin: 0; text-wrap: balance; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ---- masthead ---- */
+.masthead {
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.wordmark { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.wordmark span { color: var(--accent); }
+.tagline { color: var(--ink-3); font-size: 0.82rem; max-width: 62ch; }
+
+/* ---- console layout ---- */
+.console {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr) 320px;
+  gap: 1px;
+  background: var(--line);
+  min-height: calc(100vh - 58px);
+}
+.rail { background: var(--surface); padding: 18px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
+.stage-wrap { background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+
+@media (max-width: 1080px) {
+  .console { grid-template-columns: 1fr; }
+  .stage-wrap { order: -1; }
+  .rail { max-height: none; }
+}
+
+/* ---- control groups ---- */
+.group { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 3px; border: 1px solid var(--line-soft); }
+.seg.two { grid-template-columns: repeat(2, 1fr); }
+.seg button {
+  font: inherit; font-size: 0.82rem; font-weight: 500;
+  padding: 7px 4px; border: 0; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--ink-2);
+}
+.seg button:hover { color: var(--ink); background: var(--surface); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.seg-note { color: var(--ink-3); font-size: 0.76rem; }
+
+.btn {
+  font: inherit; font-size: 0.85rem; font-weight: 500;
+  padding: 9px 14px; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.wide { width: 100%; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > .btn { flex: 1; min-width: 0; }
+
+/* ---- sliders ---- */
+.slider-line { display: flex; flex-direction: column; gap: 5px; }
+.slider-line .cap { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.8rem; color: var(--ink-2); }
+.slider-line .cap b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; cursor: pointer; margin: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: var(--track); border-radius: 2px; }
+input[type="range"]::-moz-range-track { height: 3px; background: var(--track); border-radius: 2px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); margin-top: -5px; border: 0; }
+input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 0; }
+input[type="range"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+
+/* ---- muscle bank ---- */
+.bank { display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+.muscle {
+  display: grid; grid-template-columns: 34px 1fr 34px 1fr 26px; gap: 6px; align-items: center;
+  padding: 4px 6px; border-radius: 3px; border: 1px solid transparent;
+}
+.muscle:hover, .muscle.lit { background: var(--surface-2); border-color: var(--line-soft); }
+.muscle .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
+.muscle .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.muscle .num { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.muscle input[type="range"] { height: 14px; }
+.muscle input[type="range"]::-webkit-slider-thumb { width: 11px; height: 11px; margin-top: -4px; }
+.muscle input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; }
+.bank-head { display: grid; grid-template-columns: 34px 1fr 34px 1fr 26px; gap: 6px; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 0 6px 4px; }
+
+/* ---- stage ---- */
+.stage { position: relative; flex: 1; min-height: 380px; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hud {
+  position: absolute; left: 14px; top: 14px; display: flex; gap: 20px; flex-wrap: wrap;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  border: 1px solid var(--line); border-radius: 3px; padding: 9px 14px;
+  backdrop-filter: blur(6px);
+}
+.stat { display: flex; flex-direction: column; gap: 1px; }
+.stat .k { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.stat .v { font-family: "IBM Plex Mono", monospace; font-size: 1.02rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat .v.accent { color: var(--accent); }
+.hint { position: absolute; right: 14px; bottom: 12px; font-size: 0.72rem; color: var(--ink-3); text-align: right; }
+
+.transport { display: flex; gap: 1px; align-items: stretch; border-top: 1px solid var(--line); background: var(--line); }
+.transport > * { background: var(--surface); }
+.transport .btn { border: 0; border-radius: 0; padding: 11px 18px; }
+.episode-bar { flex: 1; position: relative; overflow: hidden; }
+.episode-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: color-mix(in srgb, var(--accent) 16%, transparent); border-right: 1px solid var(--accent); }
+.episode-bar span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.74rem; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+
+/* ---- training ---- */
+.chart-frame { border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); padding: 8px; }
+.chart-frame canvas { display: block; width: 100%; height: 128px; }
+.legend { display: flex; gap: 14px; font-size: 0.74rem; color: var(--ink-2); padding: 6px 2px 0; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top-width: 2px; margin-right: 5px; vertical-align: middle; }
+.legend .best i { border-top: 2px solid var(--accent); }
+.legend .mean i { border-top: 2px dashed var(--ink-3); }
+.progress { height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.12s linear; }
+.readout { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--ink-2); min-height: 2.6em; }
+.readout .up { color: var(--accent); }
+
+.note { font-size: 0.76rem; color: var(--ink-3); }
+.equation {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; line-height: 1.6; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-left: 2px solid var(--accent);
+  padding: 8px 10px; border-radius: 2px;
+}
+.scale-key { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--ink-3); }
+.scale-key .ramp { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--contract), var(--ink-3) 50%, var(--extend)); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="masthead">
+  <h1 class="wordmark">Gait<span>/</span>Lab</h1>
+  <p class="tagline">Creatures are point masses joined by springs. Muscles are springs whose rest length oscillates &mdash; set the parameters yourself, or give the lab a goal and let evolution search for them.</p>
+</header>
+
+<main class="console">
+  <!-- ============ left rail: setup + training ============ -->
+  <section class="rail">
+    <div class="group">
+      <h2 class="eyebrow">Body plan</h2>
+      <div class="seg" id="morph-seg" role="group" aria-label="Body plan"></div>
+      <p class="seg-note mono" id="morph-note"></p>
+    </div>
+
+    <div class="group">
+      <h2 class="eyebrow">Goal</h2>
+      <div class="seg" id="goal-seg" role="group" aria-label="Training goal"></div>
+      <p class="seg-note" id="goal-note"></p>
+    </div>
+
+    <div class="group">
+      <h2 class="eyebrow">Train</h2>
+      <p class="note">An evolution strategy samples a population of parameter sets, keeps the best quarter, and recentres on them. The creature on the stage updates to the best found each generation.</p>
+      <div class="row">
+        <button class="btn primary" id="train-btn">Evolve 30 generations</button>
+      </div>
+      <div class="progress"><i id="train-progress"></i></div>
+      <div class="chart-frame">
+        <canvas id="chart" aria-label="Best and mean fitness per generation"></canvas>
+      </div>
+      <div class="legend">
+        <span class="best"><i></i>Best so far</span>
+        <span class="mean"><i></i>Generation mean</span>
+      </div>
+      <p class="readout" id="train-readout">No training run yet. The stage is showing hand-set parameters.</p>
+    </div>
+
+    <div class="group">
+      <h2 class="eyebrow">Controller file</h2>
+      <div class="row">
+        <button class="btn" id="save-btn">Save</button>
+        <button class="btn" id="load-btn">Load</button>
+      </div>
+      <input type="file" id="load-input" accept="application/json,.json" hidden>
+      <p class="note">Saves frequency, amplitudes and phases as JSON &mdash; the same <span class="mono">agent-sandbox-agent</span> format the Python package reads with <span class="mono">load_agent()</span>.</p>
+    </div>
+  </section>
+
+  <!-- ============ centre: the stage ============ -->
+  <section class="stage-wrap">
+    <div class="stage">
+      <canvas id="stage"></canvas>
+      <div class="hud">
+        <div class="stat"><span class="k">Travelled</span><span class="v" id="hud-dist">0.00 m</span></div>
+        <div class="stat"><span class="k">Height</span><span class="v" id="hud-height">0.00 m</span></div>
+        <div class="stat"><span class="k">Peak</span><span class="v" id="hud-peak">0.00 m</span></div>
+        <div class="stat"><span class="k" id="hud-goal-k">Walk score</span><span class="v accent" id="hud-score">0.00</span></div>
+      </div>
+      <p class="hint">Drag to orbit &middot; scroll to zoom</p>
+    </div>
+    <div class="transport">
+      <button class="btn" id="play-btn">Pause</button>
+      <button class="btn" id="restart-btn">Restart</button>
+      <div class="episode-bar"><i id="episode-fill"></i><span id="episode-clock">0.0 s</span></div>
+    </div>
+  </section>
+
+  <!-- ============ right rail: the muscles ============ -->
+  <section class="rail">
+    <div class="group">
+      <h2 class="eyebrow">Drive</h2>
+      <div class="slider-line">
+        <label class="cap" for="freq">Frequency <b id="freq-val">1.20 Hz</b></label>
+        <input type="range" id="freq" min="0.2" max="3.5" step="0.01" value="1.2">
+      </div>
+      <div class="equation">rest&#7522;(t) = L&#7522; &middot; (1 + amp&#7522; &middot; sin(2&pi;ft + &phi;&#7522;))</div>
+      <div class="scale-key"><span>contracting</span><span class="ramp"></span><span>extending</span></div>
+    </div>
+
+    <div class="group">
+      <h2 class="eyebrow"><span id="muscle-count">0</span> muscles</h2>
+      <div class="bank-head"><span></span><span>Amplitude</span><span></span><span>Phase</span><span></span></div>
+      <div class="bank" id="bank"></div>
+      <div class="row">
+        <button class="btn" id="zero-btn">Slacken all</button>
+        <button class="btn" id="random-btn">Randomise</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2 class="eyebrow">Trained examples</h2>
+      <div class="seg two" id="preset-seg" role="group" aria-label="Trained examples"></div>
+      <p class="note">Controllers evolved in the Python package and shipped with the page, so you can watch a finished gait before training your own.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+/* ==================================================================
+   Physics — a direct port of agent_sandbox.creature (same constants,
+   same integration order), so trajectories match the Python package.
+   ================================================================== */
+const GRAVITY = 9.81, NODE_MASS = 1.0, STIFFNESS = 1400, SPRING_DAMPING = 18;
+const AIR_DRAG = 0.15, GROUND_FRICTION = 0.90, GROUND_BOUNCE = 0.15;
+const DT = 0.005, MAX_SPEED = 40, AMP_LIMIT = 0.5, MIN_REST_FACTOR = 0.25;
+const FREQ_MIN = 0.2, FREQ_MAX = 3.5;
+const EPISODE = 8.0;        // stage episode length, seconds
+const TRAIN_DURATION = 5.0; // rollout length used for fitness
+
+function buildMorph(name, label, blurb, positions, edges) {
+  const springs = edges.map(([a, b, muscle]) => {
+    const dx = positions[b][0] - positions[a][0];
+    const dy = positions[b][1] - positions[a][1];
+    const dz = positions[b][2] - positions[a][2];
+    return { a, b, rest: Math.hypot(dx, dy, dz), muscle };
+  });
+  const muscleSprings = springs.map((s, i) => (s.muscle ? i : -1)).filter((i) => i >= 0);
+  return { name, label, blurb, positions, springs, muscleSprings, numMuscles: muscleSprings.length };
+}
+
+const MORPHS = {
+  blob: buildMorph("blob", "Blob", "tetrahedron, every strut a muscle",
+    [[0.50, 0.05, 0.00], [-0.25, 0.05, 0.433], [-0.25, 0.05, -0.433], [0.00, 0.75, 0.00]],
+    [[0, 1, true], [0, 2, true], [0, 3, true], [1, 2, true], [1, 3, true], [2, 3, true]]),
+  quadruped: buildMorph("quadruped", "Quadruped", "rigid frame, four muscle legs",
+    [[0.35, 0.65, 0.25], [0.35, 0.65, -0.25], [-0.35, 0.65, -0.25], [-0.35, 0.65, 0.25],
+     [0.45, 0.06, 0.35], [0.45, 0.06, -0.35], [-0.45, 0.06, -0.35], [-0.45, 0.06, 0.35]],
+    [[0, 1, false], [1, 2, false], [2, 3, false], [3, 0, false], [0, 2, false], [1, 3, false],
+     [0, 4, true], [1, 5, true], [2, 6, true], [3, 7, true],
+     [4, 1, true], [4, 3, true], [5, 0, true], [5, 2, true],
+     [6, 1, true], [6, 3, true], [7, 0, true], [7, 2, true]]),
+  worm: buildMorph("worm", "Worm", "zig-zag chain that inches along",
+    Array.from({ length: 6 }, (_, i) => [i * 0.28 - 0.7, i % 2 === 0 ? 0.05 : 0.42, 0.0]),
+    [[0, 1, true], [1, 2, true], [2, 3, true], [3, 4, true], [4, 5, true],
+     [0, 2, true], [1, 3, true], [2, 4, true], [3, 5, true]]),
+};
+
+class Sim {
+  constructor(morph) { this.m = morph; this.reset(); }
+  reset() {
+    const n = this.m.positions.length;
+    this.t = 0; this.diverged = false;
+    this.px = new Float64Array(n); this.py = new Float64Array(n); this.pz = new Float64Array(n);
+    this.vx = new Float64Array(n); this.vy = new Float64Array(n); this.vz = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      this.px[i] = this.m.positions[i][0];
+      this.py[i] = this.m.positions[i][1];
+      this.pz[i] = this.m.positions[i][2];
+    }
+    this.rest = this.m.springs.map((s) => s.rest);
+    this.fx = new Float64Array(n); this.fy = new Float64Array(n); this.fz = new Float64Array(n);
+  }
+  com() {
+    const n = this.px.length;
+    let x = 0, y = 0, z = 0;
+    for (let i = 0; i < n; i++) { x += this.px[i]; y += this.py[i]; z += this.pz[i]; }
+    return [x / n, y / n, z / n];
+  }
+  step(freq, amps, phases) {
+    if (this.diverged) return;
+    const { px, py, pz, vx, vy, vz, fx, fy, fz } = this;
+    const springs = this.m.springs, n = px.length;
+    for (let i = 0; i < n; i++) { fx[i] = 0; fy[i] = -GRAVITY * NODE_MASS; fz[i] = 0; }
+
+    const omega = 2 * Math.PI * freq * this.t;
+    let mi = 0;
+    for (let si = 0; si < springs.length; si++) {
+      const s = springs[si];
+      let rest = s.rest;
+      if (s.muscle) {
+        rest = s.rest * (1 + amps[mi] * Math.sin(omega + phases[mi]));
+        const floor = s.rest * MIN_REST_FACTOR;
+        if (rest < floor) rest = floor;
+        mi++;
+      }
+      this.rest[si] = rest;
+      const a = s.a, b = s.b;
+      const dx = px[b] - px[a], dy = py[b] - py[a], dz = pz[b] - pz[a];
+      const len = Math.hypot(dx, dy, dz);
+      if (len < 1e-9) continue;
+      const ux = dx / len, uy = dy / len, uz = dz / len;
+      const closing = (vx[b] - vx[a]) * ux + (vy[b] - vy[a]) * uy + (vz[b] - vz[a]) * uz;
+      const mag = STIFFNESS * (len - rest) + SPRING_DAMPING * closing;
+      fx[a] += mag * ux; fy[a] += mag * uy; fz[a] += mag * uz;
+      fx[b] -= mag * ux; fy[b] -= mag * uy; fz[b] -= mag * uz;
+    }
+
+    const drag = 1 - AIR_DRAG * DT;
+    for (let i = 0; i < n; i++) {
+      vx[i] = (vx[i] + fx[i] / NODE_MASS * DT) * drag;
+      vy[i] = (vy[i] + fy[i] / NODE_MASS * DT) * drag;
+      vz[i] = (vz[i] + fz[i] / NODE_MASS * DT) * drag;
+      px[i] += vx[i] * DT; py[i] += vy[i] * DT; pz[i] += vz[i] * DT;
+      if (py[i] < 0) {
+        py[i] = 0;
+        if (vy[i] < 0) vy[i] = -GROUND_BOUNCE * vy[i];
+        vx[i] *= GROUND_FRICTION; vz[i] *= GROUND_FRICTION;
+      }
+      const speed = Math.abs(vx[i]) + Math.abs(vy[i]) + Math.abs(vz[i]);
+      if (!(speed < MAX_SPEED)) { this.diverged = true; return; }
+    }
+    this.t += DT;
+  }
+}
+
+/* ---- goals ------------------------------------------------------- */
+const TARGET = [3.0, 3.0];
+const GOALS = {
+  walk:  { label: "Walk", hud: "Walk score", blurb: "Travel as far as possible along +x, penalised for drifting sideways.",
+           score: (r) => (r.final[0] - r.start[0]) - 0.3 * Math.abs(r.final[2] - r.start[2]) },
+  jump:  { label: "Jump", hud: "Peak gain", blurb: "Get the centre of mass as high as possible at any moment.",
+           score: (r) => r.maxH - r.start[1] },
+  stand: { label: "Stand", hud: "Stand score", blurb: "Hold the body tall and stay near where it started.",
+           score: (r) => r.meanH - 0.5 * Math.hypot(r.final[0] - r.start[0], r.final[2] - r.start[2]) },
+  reach: { label: "Reach", hud: "Closed", blurb: "Close the distance to the marked target on the ground.",
+           score: (r) => Math.hypot(r.start[0] - TARGET[0], r.start[2] - TARGET[1]) -
+                         Math.hypot(r.final[0] - TARGET[0], r.final[2] - TARGET[1]) },
+};
+const DIVERGED_FITNESS = -1000;
+
+function rollout(morph, ctrl, duration) {
+  const sim = new Sim(morph);
+  const start = sim.com();
+  const steps = Math.round(duration / DT);
+  let maxH = start[1], sumH = 0, done = 0;
+  for (let i = 0; i < steps; i++) {
+    sim.step(ctrl.freq, ctrl.amps, ctrl.phases);
+    if (sim.diverged) break;
+    done = i + 1;
+    const c = sim.com();
+    sumH += c[1];
+    if (c[1] > maxH) maxH = c[1];
+  }
+  return { start, final: sim.com(), maxH, meanH: done ? sumH / done : start[1], diverged: sim.diverged };
+}
+function fitness(morph, ctrl, goalKey) {
+  const r = rollout(morph, ctrl, TRAIN_DURATION);
+  return r.diverged ? DIVERGED_FITNESS : GOALS[goalKey].score(r);
+}
+
+/* ---- seeded RNG + evolution strategy ----------------------------- */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rand) {
+  let u = 0, v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+const toVector = (c) => [c.freq, ...c.amps, ...c.phases];
+function fromVector(vec, n) {
+  return {
+    freq: clamp(vec[0], FREQ_MIN, FREQ_MAX),
+    amps: vec.slice(1, 1 + n).map((v) => clamp(v, -AMP_LIMIT, AMP_LIMIT)),
+    phases: vec.slice(1 + n, 1 + 2 * n).map((v) => ((v % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)),
+  };
+}
+
+/* ==================================================================
+   Application state
+   ================================================================== */
+const PRESETS = {
+  "quadruped/walk": { freq: 1.9433, amps: [0.2178, -0.4009, -0.177, -0.2336, -0.269, -0.3218, 0.288, -0.1387, 0.0949, -0.1158, -0.0119, 0.3432], phases: [4.2587, 2.4229, 3.5672, 0.8026, 4.7778, 2.8427, 3.3888, 5.3898, 4.7716, 5.5405, 3.3891, 3.2658] },
+  "quadruped/jump": { freq: 2.1585, amps: [0.2183, -0.0454, 0.4139, 0.2755, 0.2303, 0.3261, -0.0683, -0.385, 0.4836, -0.0492, 0.4987, 0.4984], phases: [0.7181, 1.9686, 2.6804, 3.3636, 4.9221, 2.7818, 0.7001, 1.6237, 4.4869, 1.0049, 4.9335, 4.9353] },
+  "blob/walk": { freq: 1.7964, amps: [-0.4624, -0.3198, -0.5, 0.384, 0.1983, 0.0489], phases: [4.2114, 3.4131, 0.6527, 4.7467, 3.8533, 1.2934] },
+  "blob/jump": { freq: 1.8579, amps: [0.4372, 0.2912, -0.311, 0.4216, -0.1488, -0.0355], phases: [4.8945, 1.8215, 3.1919, 4.3992, 5.7912, 1.3586] },
+  "worm/walk": { freq: 1.5858, amps: [-0.3304, -0.4889, 0.2804, -0.4421, 0.0295, -0.1136, 0.0918, -0.4207, -0.1745], phases: [4.0423, 2.7766, 1.7571, 1.3673, 4.8327, 4.9683, 1.8924, 3.3561, 1.1883] },
+};
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = {
+  morphKey: "quadruped",
+  goalKey: "walk",
+  ctrl: { freq: 1.2, amps: [], phases: [] },
+  playing: !reduceMotion,
+  hover: -1,
+  training: false,
+  history: [],
+  meanHistory: [],
+  trainedGens: 0,
+};
+let morph = MORPHS[state.morphKey];
+let sim = new Sim(morph);
+let epStart = sim.com(), epMaxH = epStart[1], epSumH = 0, epTicks = 0;
+
+function setMuscleCount(n, fill) {
+  state.ctrl.amps = Array.from({ length: n }, (_, i) => (fill ? fill.amps[i] : 0));
+  state.ctrl.phases = Array.from({ length: n }, (_, i) => (fill ? fill.phases[i] : 0));
+  if (fill) state.ctrl.freq = fill.freq;
+}
+
+function restartEpisode() {
+  sim = new Sim(morph);
+  epStart = sim.com(); epMaxH = epStart[1]; epSumH = 0; epTicks = 0;
+}
+
+/* ==================================================================
+   3D renderer — perspective projection onto a 2D canvas, painter's
+   algorithm. No library: the scene is a few dozen struts and nodes.
+   ================================================================== */
+const stage = $("stage");
+const ctx = stage.getContext("2d");
+const cam = { yaw: -0.62, pitch: 0.30, dist: 6.2, targetX: 0, followX: 0 };
+let dpr = 1, W = 0, H = 0;
+
+function resize() {
+  const rect = stage.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.max(1, Math.round(rect.width)); H = Math.max(1, Math.round(rect.height));
+  stage.width = W * dpr; stage.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+new ResizeObserver(resize).observe(stage);
+
+function buildCamera() {
+  const tx = cam.followX, ty = 0.55, tz = 0;
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const eye = [tx + cam.dist * cp * Math.sin(cam.yaw), ty + cam.dist * sp, tz + cam.dist * cp * Math.cos(cam.yaw)];
+  let f = [tx - eye[0], ty - eye[1], tz - eye[2]];
+  const fl = Math.hypot(...f); f = f.map((v) => v / fl);
+  // right = normalize(cross(worldUp, forward)) with worldUp = (0, 1, 0),
+  // then up = cross(forward, right) — in that order, or the view flips
+  // vertically and shadows render above the body instead of beneath it.
+  let r = [f[2], 0, -f[0]];
+  const rl = Math.hypot(...r); r = r.map((v) => v / rl);
+  const u = [f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0]];
+  const focal = (H / 2) / Math.tan((48 * Math.PI / 180) / 2);
+  return { eye, r, u, f, focal };
+}
+function toCam(p, c) {
+  const dx = p[0] - c.eye[0], dy = p[1] - c.eye[1], dz = p[2] - c.eye[2];
+  return {
+    x: dx * c.r[0] + dy * c.r[1] + dz * c.r[2],
+    y: dx * c.u[0] + dy * c.u[1] + dz * c.u[2],
+    z: dx * c.f[0] + dy * c.f[1] + dz * c.f[2],
+  };
+}
+const toScreen = (v, c) => ({ x: W / 2 + c.focal * v.x / v.z, y: H / 2 - c.focal * v.y / v.z, z: v.z });
+const NEAR = 0.12;
+function clipSeg(a, b) {
+  const ain = a.z > NEAR, bin = b.z > NEAR;
+  if (!ain && !bin) return null;
+  if (ain && bin) return [a, b];
+  const t = (NEAR - a.z) / (b.z - a.z);
+  const mid = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR };
+  return ain ? [a, mid] : [mid, b];
+}
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// Sutherland–Hodgman clip of a polygon against the near plane, so the
+// floor quad still fills correctly when its corners sit behind the camera.
+function clipPolyNear(poly) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const ain = a.z > NEAR, bin = b.z > NEAR;
+    if (ain) out.push(a);
+    if (ain !== bin) {
+      const t = (NEAR - a.z) / (b.z - a.z);
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR });
+    }
+  }
+  return out;
+}
+
+function drawGround(c) {
+  const gridCol = css("--stage-grid"), majorCol = css("--stage-grid-major");
+  const cx = Math.round(cam.followX);
+  const R = 13;
+
+  // The floor itself — without a filled surface the creature reads as
+  // floating in a void. Filled far wider than the grid so its edge never
+  // shows as a cliff at the bottom of the frame; the grid fades out first.
+  const F = 90;
+  const quad = clipPolyNear([
+    toCam([cx - F, 0, -F], c), toCam([cx + F, 0, -F], c),
+    toCam([cx + F, 0, F], c), toCam([cx - F, 0, F], c),
+  ]);
+  if (quad.length > 2) {
+    ctx.fillStyle = css("--stage-floor");
+    ctx.beginPath();
+    quad.forEach((v, i) => {
+      const s = toScreen(v, c);
+      i === 0 ? ctx.moveTo(s.x, s.y) : ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.lineWidth = 1;
+  for (let gx = cx - R; gx <= cx + R; gx++) {
+    const seg = clipSeg(toCam([gx, 0, -R], c), toCam([gx, 0, R], c));
+    if (!seg) continue;
+    const major = gx % 5 === 0;
+    ctx.strokeStyle = major ? majorCol : gridCol;
+    ctx.globalAlpha = (major ? 1 : 0.72) * (1 - Math.min(1, Math.abs(gx - cam.followX) / (R + 5)));
+    const a = toScreen(seg[0], c), b = toScreen(seg[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (let gz = -R; gz <= R; gz++) {
+    const seg = clipSeg(toCam([cx - R, 0, gz], c), toCam([cx + R, 0, gz], c));
+    if (!seg) continue;
+    ctx.strokeStyle = gz % 5 === 0 ? majorCol : gridCol;
+    ctx.globalAlpha = (gz % 5 === 0 ? 1 : 0.72) * (1 - Math.min(1, Math.abs(gz) / (R + 5)));
+    const a = toScreen(seg[0], c), b = toScreen(seg[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // distance markers every 5 m along the walking axis
+  ctx.font = '500 11px "IBM Plex Mono", monospace';
+  ctx.fillStyle = css("--ink-3");
+  ctx.textAlign = "center";
+  for (let gx = cx - R; gx <= cx + R; gx += 5) {
+    const v = toCam([gx, 0, 0.35], c);
+    if (v.z <= NEAR) continue;
+    const s = toScreen(v, c);
+    if (s.x < -40 || s.x > W + 40) continue;
+    ctx.globalAlpha = 0.75;
+    ctx.fillText(gx + " m", s.x, s.y);
+  }
+  ctx.globalAlpha = 1;
+
+  // the start line, so travel is legible against a fixed reference
+  const line = clipSeg(toCam([0, 0.005, -2.2], c), toCam([0, 0.005, 2.2], c));
+  if (line) {
+    ctx.strokeStyle = css("--accent"); ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    const a = toScreen(line[0], c), b = toScreen(line[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
+  // the reach target
+  if (state.goalKey === "reach") {
+    ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= 48; i++) {
+      const th = (i / 48) * Math.PI * 2;
+      const v = toCam([TARGET[0] + 0.5 * Math.cos(th), 0.01, TARGET[1] + 0.5 * Math.sin(th)], c);
+      if (v.z <= NEAR) { started = false; continue; }
+      const s = toScreen(v, c);
+      if (!started) { ctx.moveTo(s.x, s.y); started = true; } else ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  // Atmospheric fade: the ground plane runs far past the grid so its edge
+  // never shows, and distance dissolves into the sky instead of ending.
+  const fh = [c.f[0], 0, c.f[2]];
+  const fl = Math.hypot(fh[0], fh[2]);
+  if (fl > 1e-6) {
+    fh[0] /= fl; fh[2] /= fl;
+    const num = fh[0] * c.u[0] + fh[2] * c.u[2];
+    const den = fh[0] * c.f[0] + fh[2] * c.f[2];
+    if (Math.abs(den) > 1e-6) {
+      const horizonY = H / 2 - c.focal * (num / den);
+      const fog = ctx.createLinearGradient(0, horizonY - 55, 0, horizonY + 150);
+      fog.addColorStop(0, css("--stage-sky-1"));
+      fog.addColorStop(1, css("--stage-sky-1") + "00");
+      ctx.fillStyle = fog;
+      ctx.fillRect(0, 0, W, Math.max(0, horizonY + 110));
+    }
+  }
+}
+
+function render() {
+  const c = buildCamera();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, css("--stage-sky-1"));
+  g.addColorStop(1, css("--stage-sky-2"));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.lineCap = "round";
+
+  drawGround(c);
+
+  // contact shadows
+  ctx.fillStyle = css("--shadow");
+  for (let i = 0; i < sim.px.length; i++) {
+    const h = sim.py[i];
+    const v = toCam([sim.px[i], 0.002, sim.pz[i]], c);
+    if (v.z <= NEAR) continue;
+    const s = toScreen(v, c);
+    const rad = (c.focal * 0.11 / v.z) * (1 + h * 0.55);
+    ctx.globalAlpha = Math.max(0, 0.30 - h * 0.13);
+    ctx.beginPath(); ctx.ellipse(s.x, s.y, rad, rad * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // depth-sorted struts and nodes
+  const items = [];
+  const contractCol = css("--contract"), extendCol = css("--extend"), accentCol = css("--accent");
+  let mi = 0;
+  for (let si = 0; si < morph.springs.length; si++) {
+    const s = morph.springs[si];
+    const A = toCam([sim.px[s.a], sim.py[s.a], sim.pz[s.a]], c);
+    const B = toCam([sim.px[s.b], sim.py[s.b], sim.pz[s.b]], c);
+    const muscleNo = s.muscle ? mi++ : -1;
+    const seg = clipSeg(A, B);
+    if (!seg) continue;
+    let colour = css("--bone-dark"), width = 0.028, alpha = 0.9;
+    if (s.muscle) {
+      // diverging scale: shorter than rest → contracting, longer → extending
+      const strain = (sim.rest[si] / s.rest - 1) / AMP_LIMIT;
+      const t = clamp(Math.abs(strain), 0, 1);
+      colour = strain < 0 ? contractCol : extendCol;
+      alpha = 0.42 + 0.58 * t;
+      width = 0.032 + 0.030 * t;
+      if (muscleNo === state.hover) { colour = accentCol; alpha = 1; width = 0.075; }
+    }
+    items.push({ z: (A.z + B.z) / 2, kind: "spring", seg, colour, width, alpha });
+  }
+  for (let i = 0; i < sim.px.length; i++) {
+    const v = toCam([sim.px[i], sim.py[i], sim.pz[i]], c);
+    if (v.z <= NEAR) continue;
+    items.push({ z: v.z, kind: "node", v });
+  }
+  items.sort((a, b) => b.z - a.z);
+
+  for (const it of items) {
+    if (it.kind === "spring") {
+      const a = toScreen(it.seg[0], c), b = toScreen(it.seg[1], c);
+      ctx.globalAlpha = it.alpha;
+      ctx.strokeStyle = it.colour;
+      ctx.lineWidth = Math.max(1.2, c.focal * it.width / Math.max(it.z, NEAR));
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    } else {
+      const s = toScreen(it.v, c);
+      const rad = Math.max(2, c.focal * 0.085 / it.v.z);
+      ctx.globalAlpha = 1;
+      const grad = ctx.createRadialGradient(s.x - rad * 0.35, s.y - rad * 0.4, rad * 0.1, s.x, s.y, rad);
+      grad.addColorStop(0, css("--bone"));
+      grad.addColorStop(1, css("--bone-dark"));
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(s.x, s.y, rad, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  if (sim.diverged) {
+    ctx.fillStyle = css("--contract");
+    ctx.font = '600 13px "IBM Plex Sans Condensed", sans-serif';
+    ctx.textAlign = "center";
+    ctx.fillText("Simulation blew up — these parameters are unstable. Restart or soften the amplitudes.", W / 2, H - 26);
+  }
+}
+
+/* ---- orbit + zoom ------------------------------------------------ */
+let dragging = false, lastX = 0, lastY = 0;
+stage.addEventListener("pointerdown", (e) => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  cam.yaw -= (e.clientX - lastX) * 0.006;
+  cam.pitch = clamp(cam.pitch + (e.clientY - lastY) * 0.005, 0.06, 1.25);
+  lastX = e.clientX; lastY = e.clientY;
+});
+stage.addEventListener("pointerup", (e) => { dragging = false; stage.releasePointerCapture(e.pointerId); });
+stage.addEventListener("pointercancel", () => { dragging = false; });
+stage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  cam.dist = clamp(cam.dist * (1 + Math.sign(e.deltaY) * 0.09), 2.2, 18);
+}, { passive: false });
+
+/* ==================================================================
+   Fitness chart — two series of the same measure on one axis
+   ================================================================== */
+const chart = $("chart"), cctx = chart.getContext("2d");
+let chartHover = -1;
+function drawChart() {
+  const rect = chart.getBoundingClientRect();
+  const cw = Math.max(1, Math.round(rect.width)), ch = Math.max(1, Math.round(rect.height));
+  chart.width = cw * dpr; chart.height = ch * dpr;
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cctx.clearRect(0, 0, cw, ch);
+
+  const best = state.history, mean = state.meanHistory;
+  const padL = 44, padR = 12, padT = 10, padB = 18;
+  const plotW = cw - padL - padR, plotH = ch - padT - padB;
+
+  if (best.length === 0) {
+    cctx.fillStyle = css("--ink-3");
+    cctx.font = '400 11px "IBM Plex Sans", sans-serif';
+    cctx.textAlign = "center";
+    cctx.fillText("Fitness per generation appears here", cw / 2, ch / 2 + 3);
+    return;
+  }
+
+  const all = best.concat(mean).filter(Number.isFinite);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi - lo < 1e-6) { hi += 0.5; lo -= 0.5; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const X = (i) => padL + (best.length === 1 ? plotW / 2 : (i / (best.length - 1)) * plotW);
+  const Y = (v) => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
+
+  // recessive grid + axis labels
+  cctx.strokeStyle = css("--line"); cctx.lineWidth = 1;
+  cctx.fillStyle = css("--ink-3");
+  cctx.font = '400 10px "IBM Plex Mono", monospace';
+  cctx.textAlign = "right";
+  for (let k = 0; k <= 2; k++) {
+    const v = lo + (hi - lo) * (k / 2), y = Math.round(Y(v)) + 0.5;
+    cctx.globalAlpha = 0.6;
+    cctx.beginPath(); cctx.moveTo(padL, y); cctx.lineTo(cw - padR, y); cctx.stroke();
+    cctx.globalAlpha = 1;
+    cctx.fillText(v.toFixed(1), padL - 6, y + 3);
+  }
+
+  // generation mean: dashed, recessive — context for the best-so-far line
+  cctx.strokeStyle = css("--ink-3"); cctx.lineWidth = 1.5; cctx.setLineDash([3, 3]);
+  cctx.beginPath();
+  let started = false;
+  mean.forEach((v, i) => {
+    if (!Number.isFinite(v)) { started = false; return; }
+    const y = Y(clamp(v, lo, hi));
+    started ? cctx.lineTo(X(i), y) : cctx.moveTo(X(i), y);
+    started = true;
+  });
+  cctx.stroke(); cctx.setLineDash([]);
+
+  // best so far: area + 2px line
+  const accent = css("--accent");
+  const grad = cctx.createLinearGradient(0, padT, 0, padT + plotH);
+  grad.addColorStop(0, accent + "38");
+  grad.addColorStop(1, accent + "05");
+  cctx.beginPath();
+  cctx.moveTo(X(0), padT + plotH);
+  best.forEach((v, i) => cctx.lineTo(X(i), Y(v)));
+  cctx.lineTo(X(best.length - 1), padT + plotH);
+  cctx.closePath(); cctx.fillStyle = grad; cctx.fill();
+
+  cctx.strokeStyle = accent; cctx.lineWidth = 2; cctx.beginPath();
+  best.forEach((v, i) => (i === 0 ? cctx.moveTo(X(i), Y(v)) : cctx.lineTo(X(i), Y(v))));
+  cctx.stroke();
+
+  // emphasised endpoint with a direct label
+  const li = best.length - 1;
+  cctx.fillStyle = accent;
+  cctx.beginPath(); cctx.arc(X(li), Y(best[li]), 3.5, 0, Math.PI * 2); cctx.fill();
+  cctx.strokeStyle = css("--surface-2"); cctx.lineWidth = 2; cctx.stroke();
+
+  if (chartHover >= 0 && chartHover < best.length) {
+    const x = X(chartHover);
+    cctx.strokeStyle = css("--ink-3"); cctx.globalAlpha = 0.5; cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.moveTo(x, padT); cctx.lineTo(x, padT + plotH); cctx.stroke();
+    cctx.globalAlpha = 1;
+    const mv = mean[chartHover];
+    const txt = "gen " + chartHover + "  best " + best[chartHover].toFixed(2) +
+                "  mean " + (Number.isFinite(mv) ? mv.toFixed(2) : "unstable");
+    cctx.font = '500 10px "IBM Plex Mono", monospace';
+    const tw = cctx.measureText(txt).width + 10;
+    const tx = clamp(x - tw / 2, 2, cw - tw - 2);
+    cctx.fillStyle = css("--surface");
+    cctx.strokeStyle = css("--line");
+    cctx.beginPath(); cctx.rect(tx, 1, tw, 16); cctx.fill(); cctx.stroke();
+    cctx.fillStyle = css("--ink"); cctx.textAlign = "left";
+    cctx.fillText(txt, tx + 5, 12);
+  }
+}
+chart.addEventListener("pointermove", (e) => {
+  const rect = chart.getBoundingClientRect();
+  const n = state.history.length;
+  if (!n) return;
+  const padL = 44, padR = 12;
+  const frac = (e.clientX - rect.left - padL) / Math.max(1, rect.width - padL - padR);
+  chartHover = clamp(Math.round(frac * (n - 1)), 0, n - 1);
+  drawChart();
+});
+chart.addEventListener("pointerleave", () => { chartHover = -1; drawChart(); });
+
+/* ==================================================================
+   UI construction
+   ================================================================== */
+function buildSegs() {
+  const ms = $("morph-seg");
+  ms.textContent = "";
+  Object.values(MORPHS).forEach((m) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = m.label;
+    b.setAttribute("aria-pressed", String(m.name === state.morphKey));
+    b.addEventListener("click", () => selectMorph(m.name));
+    ms.appendChild(b);
+  });
+  $("morph-note").textContent =
+    `${morph.positions.length} nodes · ${morph.springs.length} springs · ${morph.numMuscles} muscles`;
+
+  const gs = $("goal-seg");
+  gs.textContent = "";
+  gs.style.gridTemplateColumns = "repeat(4, 1fr)";
+  Object.entries(GOALS).forEach(([key, g]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = g.label;
+    b.setAttribute("aria-pressed", String(key === state.goalKey));
+    b.addEventListener("click", () => {
+      state.goalKey = key;
+      state.history = []; state.meanHistory = [];
+      $("train-readout").textContent = "Goal changed — the fitness history is cleared. Evolve to search for this one.";
+      buildSegs(); drawChart(); syncHud();
+    });
+    gs.appendChild(b);
+  });
+  $("goal-note").textContent = GOALS[state.goalKey].blurb;
+  $("hud-goal-k").textContent = GOALS[state.goalKey].hud;
+
+  const ps = $("preset-seg");
+  ps.textContent = "";
+  const keys = Object.keys(PRESETS).filter((k) => k.startsWith(state.morphKey + "/"));
+  if (!keys.length) {
+    ps.innerHTML = '<span class="note" style="padding:6px">No trained example shipped for this body plan — evolve one.</span>';
+  } else {
+    keys.forEach((k) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = GOALS[k.split("/")[1]].label + " gait";
+      b.addEventListener("click", () => {
+        const p = PRESETS[k];
+        state.ctrl = { freq: p.freq, amps: p.amps.slice(), phases: p.phases.slice() };
+        state.goalKey = k.split("/")[1];
+        restartEpisode(); buildSegs(); buildBank(); syncControls();
+        $("train-readout").textContent = "Loaded a controller evolved in the Python package.";
+      });
+      ps.appendChild(b);
+    });
+  }
+}
+
+function buildBank() {
+  const bank = $("bank");
+  bank.textContent = "";
+  $("muscle-count").textContent = String(morph.numMuscles);
+  for (let i = 0; i < morph.numMuscles; i++) {
+    const row = document.createElement("div");
+    row.className = "muscle";
+    row.addEventListener("pointerenter", () => { state.hover = i; row.classList.add("lit"); });
+    row.addEventListener("pointerleave", () => { state.hover = -1; row.classList.remove("lit"); });
+
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    const dot = document.createElement("i");
+    dot.className = "dot"; dot.id = "dot-" + i;
+    tag.append(dot, document.createTextNode("M" + (i + 1)));
+
+    const ampNum = document.createElement("span");
+    ampNum.className = "num"; ampNum.id = "amp-num-" + i;
+    const phNum = document.createElement("span");
+    phNum.className = "num"; phNum.id = "phase-num-" + i;
+
+    const amp = document.createElement("input");
+    amp.type = "range"; amp.min = "-0.5"; amp.max = "0.5"; amp.step = "0.01";
+    amp.value = String(state.ctrl.amps[i] ?? 0);
+    amp.id = "amp-" + i;
+    amp.setAttribute("aria-label", `Muscle ${i + 1} amplitude`);
+    amp.addEventListener("input", () => {
+      state.ctrl.amps[i] = parseFloat(amp.value);
+      ampNum.textContent = state.ctrl.amps[i].toFixed(2);
+    });
+    amp.addEventListener("pointerenter", () => { state.hover = i; });
+
+    const ph = document.createElement("input");
+    ph.type = "range"; ph.min = "0"; ph.max = "6.28"; ph.step = "0.01";
+    ph.value = String(state.ctrl.phases[i] ?? 0);
+    ph.id = "phase-" + i;
+    ph.setAttribute("aria-label", `Muscle ${i + 1} phase, in radians`);
+    ph.addEventListener("input", () => {
+      state.ctrl.phases[i] = parseFloat(ph.value);
+      phNum.textContent = (state.ctrl.phases[i] / Math.PI).toFixed(1) + "π";
+    });
+    ph.addEventListener("pointerenter", () => { state.hover = i; });
+
+    row.append(tag, amp, ampNum, ph, phNum);
+    bank.appendChild(row);
+  }
+}
+
+function syncControls() {
+  $("freq").value = String(state.ctrl.freq);
+  $("freq-val").textContent = state.ctrl.freq.toFixed(2) + " Hz";
+  for (let i = 0; i < morph.numMuscles; i++) {
+    const a = $("amp-" + i), p = $("phase-" + i);
+    const an = $("amp-num-" + i), pn = $("phase-num-" + i);
+    if (a) a.value = String(state.ctrl.amps[i]);
+    if (p) p.value = String(state.ctrl.phases[i]);
+    if (an) an.textContent = state.ctrl.amps[i].toFixed(2);
+    if (pn) pn.textContent = (state.ctrl.phases[i] / Math.PI).toFixed(1) + "π";
+  }
+}
+
+function selectMorph(name) {
+  state.morphKey = name;
+  morph = MORPHS[name];
+  setMuscleCount(morph.numMuscles, null);
+  state.ctrl.freq = 1.2;
+  state.history = []; state.meanHistory = [];
+  restartEpisode();
+  buildSegs(); buildBank(); syncControls(); drawChart();
+  $("train-readout").textContent = "Body plan changed. Its muscles start slack — drive them by hand, or evolve.";
+}
+
+/* ---- live telemetry --------------------------------------------- */
+function syncHud() {
+  const c = sim.com();
+  const dist = Math.hypot(c[0] - epStart[0], c[2] - epStart[2]);
+  $("hud-dist").textContent = dist.toFixed(2) + " m";
+  $("hud-height").textContent = c[1].toFixed(2) + " m";
+  $("hud-peak").textContent = epMaxH.toFixed(2) + " m";
+  const snapshot = { start: epStart, final: c, maxH: epMaxH, meanH: epTicks ? epSumH / epTicks : epStart[1] };
+  $("hud-score").textContent = GOALS[state.goalKey].score(snapshot).toFixed(2);
+  $("hud-goal-k").textContent = GOALS[state.goalKey].hud;
+  const frac = clamp(sim.t / EPISODE, 0, 1);
+  $("episode-fill").style.width = (frac * 100) + "%";
+  $("episode-clock").textContent = sim.t.toFixed(1) + " s / " + EPISODE.toFixed(0) + " s";
+
+  // muscle activation dots mirror the diverging scale used in the stage
+  let mi = 0;
+  for (let si = 0; si < morph.springs.length; si++) {
+    if (!morph.springs[si].muscle) continue;
+    const dot = $("dot-" + mi);
+    if (dot) {
+      const strain = (sim.rest[si] / morph.springs[si].rest - 1) / AMP_LIMIT;
+      dot.style.background = strain < 0 ? css("--contract") : css("--extend");
+      dot.style.opacity = String(0.25 + 0.75 * clamp(Math.abs(strain), 0, 1));
+    }
+    mi++;
+  }
+}
+
+/* ---- main loop --------------------------------------------------- */
+let lastFrame = performance.now();
+function frame(now) {
+  const dtReal = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  if (state.playing && !state.training) {
+    const steps = Math.round(dtReal / DT);
+    for (let i = 0; i < steps; i++) {
+      sim.step(state.ctrl.freq, state.ctrl.amps, state.ctrl.phases);
+      if (sim.diverged) break;
+      const c = sim.com();
+      epSumH += c[1]; epTicks++;
+      if (c[1] > epMaxH) epMaxH = c[1];
+    }
+    if (sim.t >= EPISODE) restartEpisode();
+  }
+  const c = sim.com();
+  cam.followX += (c[0] - cam.followX) * Math.min(1, dtReal * 3.5);
+  render();
+  syncHud();
+  requestAnimationFrame(frame);
+}
+
+/* ==================================================================
+   Training: one generation per animation frame, so the page stays live
+   and the creature visibly improves as the search runs.
+   ================================================================== */
+const POP = 18, GENS = 30, ELITE = 5, SIGMA0 = 0.28, SIGMA_DECAY = 0.94;
+let train = null;
+
+function startTraining() {
+  if (state.training) { train = null; state.training = false; $("train-btn").textContent = "Evolve 30 generations"; return; }
+  const n = morph.numMuscles;
+  train = {
+    gen: 0,
+    mean: toVector(state.ctrl),
+    sigma: SIGMA0,
+    best: { freq: state.ctrl.freq, amps: state.ctrl.amps.slice(), phases: state.ctrl.phases.slice() },
+    bestFit: fitness(morph, state.ctrl, state.goalKey),
+    rand: mulberry32(Date.now() & 0xffff),
+    startFit: 0,
+  };
+  train.startFit = train.bestFit;
+  state.history = []; state.meanHistory = [];
+  state.training = true;
+  $("train-btn").textContent = "Stop";
+  $("train-readout").textContent = "Evolving…";
+  requestAnimationFrame(trainTick);
+}
+
+function trainTick() {
+  if (!state.training || !train) return;
+  const n = morph.numMuscles;
+  const scored = [];
+  for (let p = 0; p < POP; p++) {
+    const cand = train.mean.map((m) => m + gaussian(train.rand) * train.sigma);
+    const ctrl = fromVector(cand, n);
+    scored.push([fitness(morph, ctrl, state.goalKey), toVector(ctrl)]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  const elite = scored.slice(0, ELITE);
+  train.mean = train.mean.map((_, i) => elite.reduce((s, e) => s + e[1][i], 0) / elite.length);
+  if (scored[0][0] > train.bestFit) {
+    train.bestFit = scored[0][0];
+    train.best = fromVector(scored[0][1], n);
+    state.ctrl = { freq: train.best.freq, amps: train.best.amps.slice(), phases: train.best.phases.slice() };
+    syncControls();
+    restartEpisode();
+  }
+  state.history.push(train.bestFit);
+  // Average only the candidates that stayed stable — a single blown-up
+  // rollout would otherwise drag the mean to -1000 and flatten the chart.
+  const stable = scored.filter((e) => e[0] > DIVERGED_FITNESS);
+  state.meanHistory.push(stable.length
+    ? stable.reduce((s, e) => s + e[0], 0) / stable.length
+    : NaN);
+  train.sigma *= SIGMA_DECAY;
+  train.gen++;
+  state.trainedGens++;
+
+  $("train-progress").style.width = (train.gen / GENS * 100) + "%";
+  drawChart();
+  const unstableStart = train.startFit <= DIVERGED_FITNESS;
+  const from = unstableStart ? "an unstable start" : train.startFit.toFixed(2);
+  $("train-readout").innerHTML =
+    `gen ${train.gen}/${GENS} &middot; best <span class="up">${train.bestFit.toFixed(2)}</span> (from ${from})`;
+
+  if (train.gen >= GENS) {
+    state.training = false;
+    $("train-btn").textContent = "Evolve 30 more";
+    $("train-readout").innerHTML =
+      `Done: ${GENS} generations, fitness ${from} &rarr; ` +
+      `<span class="up">${train.bestFit.toFixed(2)}</span>. The sliders now hold what evolution found.`;
+    return;
+  }
+  requestAnimationFrame(trainTick);
+}
+
+/* ---- controller files -------------------------------------------- */
+// Handing a file to the viewer goes through the downloads capability;
+// a plain <a download> is inert inside the artifact viewer.
+let downloads = null;
+if (typeof window.claude?.use === "function") {
+  window.claude.use("downloads").then((d) => {
+    downloads = d;
+    if (!d) markSaveUnavailable();
+  }).catch(markSaveUnavailable);
+} else {
+  markSaveUnavailable();
+}
+function markSaveUnavailable() {
+  const btn = $("save-btn");
+  btn.disabled = true;
+  btn.title = "Saving a file isn't available in this view";
+}
+
+async function saveController() {
+  if (!downloads) return;
+  const payload = {
+    format: "agent-sandbox-agent",
+    version: 1,
+    agent_class: "MuscleController",
+    state: {
+      num_muscles: morph.numMuscles,
+      morphology: state.morphKey,
+      freq: state.ctrl.freq,
+      amps: state.ctrl.amps.slice(),
+      phases: state.ctrl.phases.slice(),
+      generations_trained: state.trainedGens,
+    },
+    goal: state.goalKey,
+  };
+  const filename = `${state.morphKey}-${state.goalKey}.json`;
+  $("save-btn").disabled = true;
+  try {
+    await downloads.save({ filename, data: JSON.stringify(payload, null, 2) });
+    $("train-readout").textContent = `Saved ${filename}.`;
+  } catch (err) {
+    const code = err && err.code;
+    if (code === "declined") {
+      $("train-readout").textContent = "Save cancelled — nothing was written.";
+    } else if (code === "rate_limited") {
+      $("train-readout").textContent = "A save prompt is already open. Finish that one, then try again.";
+    } else {
+      $("train-readout").textContent = "Saving isn't available in this view.";
+      markSaveUnavailable();
+      return;
+    }
+  } finally {
+    if (downloads) $("save-btn").disabled = false;
+  }
+}
+
+function loadController(ev) {
+  const file = ev.target.files[0];
+  ev.target.value = "";
+  if (!file) return;
+  file.text().then((text) => {
+    let data;
+    try { data = JSON.parse(text); } catch (err) {
+      $("train-readout").textContent = "That file isn't valid JSON.";
+      return;
+    }
+    const st = data && data.state;
+    if (!st || data.format !== "agent-sandbox-agent" || !Array.isArray(st.amps)) {
+      $("train-readout").textContent = "That file isn't a saved muscle controller.";
+      return;
+    }
+    const target = MORPHS[st.morphology];
+    if (!target || target.numMuscles !== st.amps.length) {
+      $("train-readout").textContent =
+        `That controller drives ${st.amps.length} muscles on "${st.morphology}", which doesn't match any body plan here.`;
+      return;
+    }
+    state.morphKey = st.morphology;
+    morph = target;
+    state.ctrl = { freq: st.freq, amps: st.amps.slice(), phases: st.phases.slice() };
+    state.trainedGens = st.generations_trained || 0;
+    if (data.goal && GOALS[data.goal]) state.goalKey = data.goal;
+    state.history = []; state.meanHistory = [];
+    restartEpisode(); buildSegs(); buildBank(); syncControls(); drawChart();
+    $("train-readout").textContent =
+      `Loaded a ${st.morphology} controller${st.generations_trained ? ` trained for ${st.generations_trained} generations` : ""}.`;
+  });
+}
+
+/* ---- wiring ------------------------------------------------------ */
+$("freq").addEventListener("input", (e) => {
+  state.ctrl.freq = parseFloat(e.target.value);
+  $("freq-val").textContent = state.ctrl.freq.toFixed(2) + " Hz";
+});
+$("play-btn").addEventListener("click", () => {
+  state.playing = !state.playing;
+  $("play-btn").textContent = state.playing ? "Pause" : "Play";
+});
+$("restart-btn").addEventListener("click", restartEpisode);
+$("train-btn").addEventListener("click", startTraining);
+$("zero-btn").addEventListener("click", () => {
+  setMuscleCount(morph.numMuscles, null);
+  syncControls(); restartEpisode();
+});
+$("random-btn").addEventListener("click", () => {
+  const r = mulberry32((Math.random() * 1e9) | 0);
+  state.ctrl.freq = 0.6 + r() * 1.4;
+  for (let i = 0; i < morph.numMuscles; i++) {
+    state.ctrl.amps[i] = (r() - 0.5) * 0.6;
+    state.ctrl.phases[i] = r() * 2 * Math.PI;
+  }
+  syncControls(); restartEpisode();
+});
+$("save-btn").addEventListener("click", saveController);
+$("load-btn").addEventListener("click", () => $("load-input").click());
+$("load-input").addEventListener("change", loadController);
+
+/* ---- boot -------------------------------------------------------- */
+setMuscleCount(morph.numMuscles, PRESETS["quadruped/walk"]);
+buildSegs(); buildBank(); syncControls();
+restartEpisode();
+resize(); drawChart();
+$("play-btn").textContent = state.playing ? "Pause" : "Play";
+if (!state.playing) {
+  $("train-readout").textContent = "Paused — your system asks for reduced motion. Press Play to run the simulation.";
+}
+requestAnimationFrame(frame);
+window.addEventListener("resize", () => { resize(); drawChart(); });
+</script>
