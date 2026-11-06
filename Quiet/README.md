@@ -88,6 +88,12 @@ direction, but you may occasionally tap twice.
 
 ## Setting up the project
 
+`setup.html` in this directory is the same sequence as a tick-through
+checklist, with a field at the top that substitutes your bundle prefix and
+team ID into every command and identifier. It is easier to follow on the
+phone during the home-screen steps than this file is. Open it in a browser,
+or use the published copy if you have the link.
+
 ### 1. Generate the Xcode project
 
 ```bash
