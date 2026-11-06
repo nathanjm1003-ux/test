@@ -1,0 +1,1914 @@
+<title>Gait Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ---- tokens: light is the base, both dark states re-declare the same names ---- */
+:root {
+  --ground: #e9edea;
+  --surface: #fcfdfc;
+  --surface-2: #f2f5f2;
+  --line: #d3dad6;
+  --line-soft: #e3e8e5;
+  --ink: #101a18;
+  --ink-2: #3f4e4a;
+  --ink-3: #6d7d78;
+  --accent: #008a76;
+  --accent-ink: #ffffff;
+  --contract: #c8451f;
+  --extend: #0b82c4;
+  --warn: #b4531a;
+  --stage-sky-1: #eef3f0;
+  --stage-sky-2: #f8fbf9;
+  --stage-floor: #d6dfda;
+  --stage-grid: #a4b2ac;
+  --stage-grid-major: #7d8d87;
+  --bone: #cfc7b6;
+  --bone-dark: #8d8676;
+  --shadow: rgba(16, 26, 24, 0.18);
+  --focus: #008a76;
+  --track: #d9e0dc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0a1211;
+    --surface: #101a18;
+    --surface-2: #16211f;
+    --line: #24322f;
+    --line-soft: #1b2725;
+    --ink: #e6ede9;
+    --ink-2: #a6b5b0;
+    --ink-3: #7b8a85;
+    --accent: #17a48c;
+    --accent-ink: #04211c;
+    --contract: #e2653a;
+    --extend: #3a93d2;
+    --warn: #e0904f;
+    --stage-sky-1: #060d0c;
+    --stage-sky-2: #0d1716;
+    --stage-floor: #17231f;
+    --stage-grid: #33443f;
+    --stage-grid-major: #52655f;
+    --bone: #b5ad9c;
+    --bone-dark: #6d6659;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --focus: #3fd0b4;
+    --track: #24322f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0a1211;
+  --surface: #101a18;
+  --surface-2: #16211f;
+  --line: #24322f;
+  --line-soft: #1b2725;
+  --ink: #e6ede9;
+  --ink-2: #a6b5b0;
+  --ink-3: #7b8a85;
+  --accent: #17a48c;
+  --accent-ink: #04211c;
+  --contract: #e2653a;
+  --extend: #3a93d2;
+  --warn: #e0904f;
+  --stage-sky-1: #060d0c;
+  --stage-sky-2: #0d1716;
+  --stage-floor: #17231f;
+  --stage-grid: #33443f;
+  --stage-grid-major: #52655f;
+  --bone: #b5ad9c;
+  --bone-dark: #6d6659;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --focus: #3fd0b4;
+  --track: #24322f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif; margin: 0; text-wrap: balance; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+.masthead {
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.wordmark { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.wordmark span { color: var(--accent); }
+.tagline { color: var(--ink-3); font-size: 0.82rem; max-width: 64ch; }
+
+.console {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 320px;
+  gap: 1px;
+  background: var(--line);
+  min-height: calc(100vh - 58px);
+}
+.rail { background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.rail-body { padding: 16px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
+.stage-wrap { background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+
+@media (max-width: 1120px) {
+  .console { grid-template-columns: 1fr; }
+  .stage-wrap { order: -1; }
+}
+
+/* ---- tabs ---- */
+.tabs { display: flex; background: var(--surface-2); border-bottom: 1px solid var(--line); flex: none; }
+.tabs button {
+  flex: 1; font: inherit; font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 11px 4px; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+  background: transparent; color: var(--ink-3);
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+.tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.group { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 3px; border: 1px solid var(--line-soft); }
+.seg.two { grid-template-columns: repeat(2, 1fr); }
+.seg.four { grid-template-columns: repeat(4, 1fr); }
+.seg.four button { font-size: 0.74rem; padding: 7px 2px; }
+.seg button {
+  font: inherit; font-size: 0.82rem; font-weight: 500;
+  padding: 7px 4px; border: 0; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.seg button:hover { color: var(--ink); background: var(--surface); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.seg-note { color: var(--ink-3); font-size: 0.76rem; }
+
+.btn {
+  font: inherit; font-size: 0.85rem; font-weight: 500;
+  padding: 9px 14px; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.small { padding: 5px 9px; font-size: 0.78rem; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > .btn { flex: 1; min-width: 0; }
+
+.slider-line { display: flex; flex-direction: column; gap: 4px; }
+.slider-line .cap { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.8rem; color: var(--ink-2); }
+.slider-line .cap b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; cursor: pointer; margin: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: var(--track); border-radius: 2px; }
+input[type="range"]::-moz-range-track { height: 3px; background: var(--track); border-radius: 2px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); margin-top: -5px; border: 0; }
+input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 0; }
+input[type="range"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+
+input[type="number"], select {
+  font: inherit; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+  padding: 4px 5px; width: 100%; min-width: 0;
+  border: 1px solid var(--line); border-radius: 2px;
+  background: var(--surface); color: var(--ink);
+}
+input[type="number"]:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }
+
+/* ---- editor tables ---- */
+.tbl { display: flex; flex-direction: column; gap: 3px; max-height: 34vh; overflow-y: auto; }
+.tbl-head, .tbl-row { display: grid; gap: 5px; align-items: center; }
+/* the head carries both classes itself; the rows are descendants of .tbl */
+.tbl-head.nodes, .nodes .tbl-row { grid-template-columns: 20px 1fr 1fr 1fr 24px; }
+.tbl-head.springs, .springs .tbl-row { grid-template-columns: 20px 1fr 1fr 34px 24px; }
+.tbl-head { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 0 2px 2px; }
+.tbl-row { padding: 2px; border-radius: 3px; border: 1px solid transparent; }
+.tbl-row:hover, .tbl-row.lit { background: var(--surface-2); border-color: var(--line-soft); }
+.tbl-row .idx { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-3); text-align: right; }
+.del {
+  font: inherit; font-size: 0.9rem; line-height: 1; cursor: pointer;
+  border: 1px solid transparent; border-radius: 2px; background: transparent; color: var(--ink-3);
+  padding: 3px 0;
+}
+.del:hover { color: var(--contract); border-color: var(--line); }
+.del:focus-visible { outline: 2px solid var(--focus); }
+.mtoggle {
+  font: inherit; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; cursor: pointer;
+  padding: 4px 0; border-radius: 2px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+}
+.mtoggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.mtoggle:focus-visible { outline: 2px solid var(--focus); }
+
+.alert {
+  font-size: 0.76rem; padding: 7px 9px; border-radius: 2px;
+  border: 1px solid var(--line); border-left: 2px solid var(--warn);
+  background: var(--surface-2); color: var(--ink-2);
+}
+.alert.ok { border-left-color: var(--accent); }
+
+/* ---- muscle bank ---- */
+.bank { display: flex; flex-direction: column; gap: 2px; max-height: 42vh; overflow-y: auto; padding-right: 2px; }
+.muscle {
+  display: grid; grid-template-columns: 34px 1fr 34px 1fr 26px; gap: 6px; align-items: center;
+  padding: 4px 6px; border-radius: 3px; border: 1px solid transparent;
+}
+.muscle:hover, .muscle.lit { background: var(--surface-2); border-color: var(--line-soft); }
+.muscle .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
+.muscle .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.muscle .num { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.muscle input[type="range"] { height: 14px; }
+.muscle input[type="range"]::-webkit-slider-thumb { width: 11px; height: 11px; margin-top: -4px; }
+.muscle input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; }
+.bank-head { display: grid; grid-template-columns: 34px 1fr 34px 1fr 26px; gap: 6px; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 0 6px 4px; }
+
+/* ---- goal terms ---- */
+.term { display: grid; grid-template-columns: 1fr 90px 40px; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 3px; }
+.term:hover { background: var(--surface-2); }
+.term.on { background: var(--surface-2); }
+.term .name { font-size: 0.78rem; color: var(--ink-2); }
+.term.on .name { color: var(--ink); font-weight: 500; }
+.term .w { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.formula {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; line-height: 1.6; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-left: 2px solid var(--accent);
+  padding: 8px 10px; border-radius: 2px; word-break: break-word;
+}
+
+/* ---- stage ---- */
+.stage { position: relative; flex: 1; min-height: 380px; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hud {
+  position: absolute; left: 14px; top: 14px; display: flex; gap: 20px; flex-wrap: wrap;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  border: 1px solid var(--line); border-radius: 3px; padding: 9px 14px;
+  backdrop-filter: blur(6px);
+}
+.stat { display: flex; flex-direction: column; gap: 1px; }
+.stat .k { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.stat .v { font-family: "IBM Plex Mono", monospace; font-size: 1.02rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat .v.accent { color: var(--accent); }
+.hint { position: absolute; right: 14px; bottom: 12px; font-size: 0.72rem; color: var(--ink-3); text-align: right; }
+
+.transport { display: flex; gap: 1px; align-items: stretch; border-top: 1px solid var(--line); background: var(--line); }
+.transport > * { background: var(--surface); }
+.transport .btn { border: 0; border-radius: 0; padding: 11px 18px; }
+.episode-bar { flex: 1; position: relative; overflow: hidden; }
+.episode-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: color-mix(in srgb, var(--accent) 16%, transparent); border-right: 1px solid var(--accent); }
+.episode-bar span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.74rem; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+
+.chart-frame { border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); padding: 8px; }
+.chart-frame canvas { display: block; width: 100%; height: 128px; }
+.legend { display: flex; gap: 14px; font-size: 0.74rem; color: var(--ink-2); padding: 6px 2px 0; }
+.legend i { display: inline-block; width: 14px; height: 0; margin-right: 5px; vertical-align: middle; }
+.legend .best i { border-top: 2px solid var(--accent); }
+.legend .mean i { border-top: 2px dashed var(--ink-3); }
+.progress { height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.12s linear; }
+.readout { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--ink-2); min-height: 2.6em; }
+.readout .up { color: var(--accent); }
+.note { font-size: 0.76rem; color: var(--ink-3); }
+.scale-key { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--ink-3); }
+.scale-key .ramp { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--contract), var(--ink-3) 50%, var(--extend)); }
+.filefoot { border-top: 1px solid var(--line); padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; background: var(--surface-2); flex: none; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="masthead">
+  <h1 class="wordmark">Gait<span>/</span>Lab</h1>
+  <p class="tagline">Creatures are point masses joined by springs. Muscles are springs whose rest length oscillates. Build the body, weigh what counts as success, set the world&rsquo;s physics &mdash; then drive the muscles yourself or let evolution search for them.</p>
+</header>
+
+<main class="console">
+  <!-- ============ left rail: the editors ============ -->
+  <section class="rail">
+    <div class="tabs" role="tablist" aria-label="Editors">
+      <button role="tab" id="tab-body" aria-selected="true" aria-controls="panel-body">Body</button>
+      <button role="tab" id="tab-goal" aria-selected="false" aria-controls="panel-goal">Goal</button>
+      <button role="tab" id="tab-world" aria-selected="false" aria-controls="panel-world">World</button>
+      <button role="tab" id="tab-train" aria-selected="false" aria-controls="panel-train">Train</button>
+    </div>
+
+    <div class="rail-body">
+      <!-- ---------------- BODY ---------------- -->
+      <div id="panel-body" role="tabpanel" aria-labelledby="tab-body">
+        <div class="group">
+          <h2 class="eyebrow">Start from</h2>
+          <div class="seg four" id="base-seg" role="group" aria-label="Starting body"></div>
+          <p class="seg-note mono" id="body-stats"></p>
+          <div class="alert ok" id="body-alert" hidden></div>
+        </div>
+
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Nodes</h2>
+          <div class="tbl-head nodes"><span></span><span>x</span><span>y</span><span>z</span><span></span></div>
+          <div class="tbl nodes" id="node-tbl"></div>
+          <div class="row"><button class="btn small" id="add-node">Add node</button></div>
+          <p class="note">Positions are metres; y is height and the floor is y&nbsp;=&nbsp;0. Springs take their rest length from where you put the nodes.</p>
+        </div>
+
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Springs</h2>
+          <div class="tbl-head springs"><span></span><span>from</span><span>to</span><span>musc</span><span></span></div>
+          <div class="tbl springs" id="spring-tbl"></div>
+          <div class="row"><button class="btn small" id="add-spring">Add spring</button></div>
+          <p class="note">Toggle <span class="mono">M</span> to make a spring a muscle. Structural springs hold the body together; only muscles get control parameters.</p>
+        </div>
+      </div>
+
+      <!-- ---------------- GOAL ---------------- -->
+      <div id="panel-goal" role="tabpanel" aria-labelledby="tab-goal" hidden>
+        <div class="group">
+          <h2 class="eyebrow">Preset</h2>
+          <div class="seg four" id="goal-seg" role="group" aria-label="Goal preset"></div>
+          <p class="note">The built-in goals are just weight sets &mdash; load one, then change the weights to make it yours.</p>
+        </div>
+
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Weights</h2>
+          <div id="term-list"></div>
+          <p class="note">Score is the weighted sum of these measurements over one episode. Weights carry the sign, so a penalty is just a negative weight.</p>
+        </div>
+
+        <div class="group" style="margin-top:18px">
+          <h2 class="eyebrow">Target</h2>
+          <div class="row" style="gap:8px">
+            <label class="slider-line" style="flex:1"><span class="cap">x</span>
+              <input type="number" id="target-x" step="0.5" value="3"></label>
+            <label class="slider-line" style="flex:1"><span class="cap">z</span>
+              <input type="number" id="target-z" step="0.5" value="3"></label>
+          </div>
+          <p class="note">Where <span class="mono">to target</span> measures from. Shown on the floor as a ring when that term is weighted.</p>
+        </div>
+
+        <div class="group" style="margin-top:18px">
+          <h2 class="eyebrow">Score</h2>
+          <div class="formula" id="goal-formula"></div>
+        </div>
+      </div>
+
+      <!-- ---------------- WORLD ---------------- -->
+      <div id="panel-world" role="tabpanel" aria-labelledby="tab-world" hidden>
+        <div class="group">
+          <h2 class="eyebrow">Physics</h2>
+          <div id="phys-list"></div>
+          <div class="alert" id="phys-alert" hidden></div>
+          <div class="row"><button class="btn small" id="phys-reset">Reset to Earth</button></div>
+        </div>
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Episode</h2>
+          <div id="episode-list"></div>
+          <p class="note">How long one run lasts. Fitness is measured over exactly this window, so a longer episode rewards sustained movement.</p>
+        </div>
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Search</h2>
+          <div id="search-list"></div>
+          <p class="note">Bigger populations search more thoroughly per generation and take proportionally longer.</p>
+        </div>
+      </div>
+
+      <!-- ---------------- TRAIN ---------------- -->
+      <div id="panel-train" role="tabpanel" aria-labelledby="tab-train" hidden>
+        <div class="group">
+          <h2 class="eyebrow">Evolution</h2>
+          <p class="note">Each generation samples a population of parameter sets, keeps the best quarter, and recentres on them. The creature on the stage updates to the best found so far.</p>
+          <div class="row"><button class="btn primary" id="train-btn">Evolve</button></div>
+          <div class="progress"><i id="train-progress"></i></div>
+          <div class="chart-frame">
+            <canvas id="chart" aria-label="Best and mean fitness per generation"></canvas>
+          </div>
+          <div class="legend">
+            <span class="best"><i></i>Best so far</span>
+            <span class="mean"><i></i>Generation mean</span>
+          </div>
+          <p class="readout" id="train-readout">No training run yet. The stage is showing hand-set parameters.</p>
+        </div>
+        <div class="group" style="margin-top:22px">
+          <h2 class="eyebrow">Trained examples</h2>
+          <div class="seg two" id="preset-seg" role="group" aria-label="Trained examples"></div>
+          <p class="note" id="preset-note"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="filefoot">
+      <h2 class="eyebrow">Experiment file</h2>
+      <div class="row">
+        <button class="btn" id="save-btn">Save</button>
+        <button class="btn" id="load-btn">Load</button>
+      </div>
+      <input type="file" id="load-input" accept="application/json,.json" hidden>
+      <p class="note">Saves the body, goal, physics and controller together as one JSON file &mdash; the same format the Python package reads with <span class="mono">load_experiment()</span>.</p>
+    </div>
+  </section>
+
+  <!-- ============ centre: the stage ============ -->
+  <section class="stage-wrap">
+    <div class="stage">
+      <canvas id="stage"></canvas>
+      <div class="hud">
+        <div class="stat"><span class="k">Travelled</span><span class="v" id="hud-dist">0.00 m</span></div>
+        <div class="stat"><span class="k">Height</span><span class="v" id="hud-height">0.00 m</span></div>
+        <div class="stat"><span class="k">Peak</span><span class="v" id="hud-peak">0.00 m</span></div>
+        <div class="stat"><span class="k">Score</span><span class="v accent" id="hud-score">0.00</span></div>
+      </div>
+      <p class="hint">Drag to orbit &middot; scroll to zoom</p>
+    </div>
+    <div class="transport">
+      <button class="btn" id="play-btn">Pause</button>
+      <button class="btn" id="restart-btn">Restart</button>
+      <div class="episode-bar"><i id="episode-fill"></i><span id="episode-clock">0.0 s</span></div>
+    </div>
+  </section>
+
+  <!-- ============ right rail: the muscle drive ============ -->
+  <section class="rail">
+    <div class="rail-body">
+      <div class="group">
+        <h2 class="eyebrow">Drive</h2>
+        <div class="slider-line">
+          <label class="cap" for="freq">Frequency <b id="freq-val">1.20 Hz</b></label>
+          <input type="range" id="freq" min="0.2" max="3.5" step="0.01" value="1.2">
+        </div>
+        <div class="formula">rest&#7522;(t) = L&#7522; &middot; (1 + amp&#7522; &middot; sin(2&pi;ft + &phi;&#7522;))</div>
+        <div class="scale-key"><span>contracting</span><span class="ramp"></span><span>extending</span></div>
+      </div>
+
+      <div class="group">
+        <h2 class="eyebrow"><span id="muscle-count">0</span> muscles</h2>
+        <div class="bank-head"><span></span><span>Amplitude</span><span></span><span>Phase</span><span></span></div>
+        <div class="bank" id="bank"></div>
+        <div class="row">
+          <button class="btn small" id="zero-btn">Slacken all</button>
+          <button class="btn small" id="random-btn">Randomise</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+/* ==================================================================
+   Physics — a port of agent_sandbox.creature. Every constant here is
+   editable at runtime through the World tab.
+   ================================================================== */
+const EARTH = {
+  gravity: 9.81, node_mass: 1.0, stiffness: 1400, spring_damping: 18,
+  air_drag: 0.15, ground_friction: 0.90, ground_bounce: 0.15,
+  dt: 0.005, max_speed: 40, min_rest_factor: 0.25,
+};
+let PHYS = { ...EARTH };
+
+const AMP_LIMIT = 0.5, FREQ_MIN = 0.2, FREQ_MAX = 3.5;
+const DIVERGED_FITNESS = -1000;
+
+class MorphologyError extends Error {}
+
+/** Build a body from node positions and [a, b, isMuscle] edges. */
+function buildBody(name, positions, edges) {
+  const pos = positions.map((p) => p.map(Number));
+  if (pos.length < 2) throw new MorphologyError("A body needs at least 2 nodes.");
+  if (pos.some((p) => p.length !== 3 || p.some((v) => !Number.isFinite(v))))
+    throw new MorphologyError("Every node needs three finite coordinates.");
+  if (pos.some((p) => p[1] < 0))
+    throw new MorphologyError("Nodes can't start below the floor (y must be ≥ 0).");
+
+  const springs = [], seen = new Set();
+  for (const e of edges) {
+    const a = e[0] | 0, b = e[1] | 0, muscle = !!e[2];
+    if (a === b) throw new MorphologyError(`Spring ${a}–${b} joins a node to itself.`);
+    if (!(a >= 0 && a < pos.length && b >= 0 && b < pos.length))
+      throw new MorphologyError(`Spring ${a}–${b} refers to a node that doesn't exist.`);
+    const key = Math.min(a, b) + ":" + Math.max(a, b);
+    if (seen.has(key)) throw new MorphologyError(`Spring ${a}–${b} is defined twice.`);
+    seen.add(key);
+    const rest = Math.hypot(pos[b][0] - pos[a][0], pos[b][1] - pos[a][1], pos[b][2] - pos[a][2]);
+    if (rest < 1e-6) throw new MorphologyError(`Spring ${a}–${b} has zero length.`);
+    springs.push({ a, b, rest, muscle });
+  }
+  if (!springs.length) throw new MorphologyError("A body needs at least one spring.");
+  const muscleSprings = springs.map((s, i) => (s.muscle ? i : -1)).filter((i) => i >= 0);
+  return { name, positions: pos, springs, muscleSprings, numMuscles: muscleSprings.length };
+}
+
+const BASE_BODIES = {
+  blob: () => buildBody("blob",
+    [[0.50, 0.05, 0.00], [-0.25, 0.05, 0.433], [-0.25, 0.05, -0.433], [0.00, 0.75, 0.00]],
+    [[0, 1, true], [0, 2, true], [0, 3, true], [1, 2, true], [1, 3, true], [2, 3, true]]),
+  quadruped: () => buildBody("quadruped",
+    [[0.35, 0.65, 0.25], [0.35, 0.65, -0.25], [-0.35, 0.65, -0.25], [-0.35, 0.65, 0.25],
+     [0.45, 0.06, 0.35], [0.45, 0.06, -0.35], [-0.45, 0.06, -0.35], [-0.45, 0.06, 0.35]],
+    [[0, 1, false], [1, 2, false], [2, 3, false], [3, 0, false], [0, 2, false], [1, 3, false],
+     [0, 4, true], [1, 5, true], [2, 6, true], [3, 7, true],
+     [4, 1, true], [4, 3, true], [5, 0, true], [5, 2, true],
+     [6, 1, true], [6, 3, true], [7, 0, true], [7, 2, true]]),
+  worm: () => buildBody("worm",
+    Array.from({ length: 6 }, (_, i) => [i * 0.28 - 0.7, i % 2 === 0 ? 0.05 : 0.42, 0.0]),
+    [[0, 1, true], [1, 2, true], [2, 3, true], [3, 4, true], [4, 5, true],
+     [0, 2, true], [1, 3, true], [2, 4, true], [3, 5, true]]),
+  tripod: () => buildBody("tripod",
+    [[0.4, 0.05, 0.0], [-0.2, 0.05, 0.35], [-0.2, 0.05, -0.35], [0.0, 0.6, 0.0]],
+    [[0, 3, true], [1, 3, true], [2, 3, true],
+     [0, 1, false], [1, 2, false], [2, 0, false]]),
+};
+
+class Sim {
+  constructor(morph) { this.m = morph; this.reset(); }
+  reset() {
+    const n = this.m.positions.length;
+    this.t = 0; this.diverged = false;
+    this.px = new Float64Array(n); this.py = new Float64Array(n); this.pz = new Float64Array(n);
+    this.vx = new Float64Array(n); this.vy = new Float64Array(n); this.vz = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      this.px[i] = this.m.positions[i][0];
+      this.py[i] = this.m.positions[i][1];
+      this.pz[i] = this.m.positions[i][2];
+    }
+    this.rest = this.m.springs.map((s) => s.rest);
+    this.fx = new Float64Array(n); this.fy = new Float64Array(n); this.fz = new Float64Array(n);
+  }
+  com() {
+    const n = this.px.length;
+    let x = 0, y = 0, z = 0;
+    for (let i = 0; i < n; i++) { x += this.px[i]; y += this.py[i]; z += this.pz[i]; }
+    return [x / n, y / n, z / n];
+  }
+  step(freq, amps, phases) {
+    if (this.diverged) return;
+    const P = PHYS, dt = P.dt, mass = P.node_mass;
+    const { px, py, pz, vx, vy, vz, fx, fy, fz } = this;
+    const springs = this.m.springs, n = px.length;
+    for (let i = 0; i < n; i++) { fx[i] = 0; fy[i] = -P.gravity * mass; fz[i] = 0; }
+
+    const omega = 2 * Math.PI * freq * this.t;
+    let mi = 0;
+    for (let si = 0; si < springs.length; si++) {
+      const s = springs[si];
+      let rest = s.rest;
+      if (s.muscle) {
+        rest = s.rest * (1 + amps[mi] * Math.sin(omega + phases[mi]));
+        const floor = s.rest * P.min_rest_factor;
+        if (rest < floor) rest = floor;
+        mi++;
+      }
+      this.rest[si] = rest;
+      const a = s.a, b = s.b;
+      const dx = px[b] - px[a], dy = py[b] - py[a], dz = pz[b] - pz[a];
+      const len = Math.hypot(dx, dy, dz);
+      if (len < 1e-9) continue;
+      const ux = dx / len, uy = dy / len, uz = dz / len;
+      const closing = (vx[b] - vx[a]) * ux + (vy[b] - vy[a]) * uy + (vz[b] - vz[a]) * uz;
+      const mag = P.stiffness * (len - rest) + P.spring_damping * closing;
+      fx[a] += mag * ux; fy[a] += mag * uy; fz[a] += mag * uz;
+      fx[b] -= mag * ux; fy[b] -= mag * uy; fz[b] -= mag * uz;
+    }
+
+    const drag = 1 - P.air_drag * dt;
+    for (let i = 0; i < n; i++) {
+      vx[i] = (vx[i] + fx[i] / mass * dt) * drag;
+      vy[i] = (vy[i] + fy[i] / mass * dt) * drag;
+      vz[i] = (vz[i] + fz[i] / mass * dt) * drag;
+      px[i] += vx[i] * dt; py[i] += vy[i] * dt; pz[i] += vz[i] * dt;
+      if (py[i] < 0) {
+        py[i] = 0;
+        if (vy[i] < 0) vy[i] = -P.ground_bounce * vy[i];
+        vx[i] *= P.ground_friction; vz[i] *= P.ground_friction;
+      }
+      const speed = Math.abs(vx[i]) + Math.abs(vy[i]) + Math.abs(vz[i]);
+      if (!(speed < P.max_speed)) { this.diverged = true; return; }
+    }
+    this.t += dt;
+  }
+}
+
+function rollout(morph, ctrl, duration) {
+  const sim = new Sim(morph);
+  const start = sim.com();
+  const steps = Math.round(duration / PHYS.dt);
+  const muscles = morph.muscleSprings, springs = morph.springs;
+  let maxH = start[1], sumH = 0, sumE = 0, done = 0;
+  for (let i = 0; i < steps; i++) {
+    sim.step(ctrl.freq, ctrl.amps, ctrl.phases);
+    if (sim.diverged) break;
+    done = i + 1;
+    const c = sim.com();
+    sumH += c[1];
+    if (c[1] > maxH) maxH = c[1];
+    if (muscles.length) {
+      let e = 0;
+      for (const si of muscles) e += Math.abs(sim.rest[si] / springs[si].rest - 1);
+      sumE += e / muscles.length;
+    }
+  }
+  return {
+    start, final: sim.com(), maxH,
+    meanH: done ? sumH / done : start[1],
+    effort: done ? sumE / done : 0,
+    diverged: sim.diverged,
+  };
+}
+
+/* ---- goals: weights over measured terms -------------------------- */
+const GOAL_TERMS = {
+  forward:      { label: "forward (Δx)",       fn: (t) => t.final[0] - t.start[0] },
+  lateral:      { label: "sideways (Δz)",      fn: (t) => t.final[2] - t.start[2] },
+  sideways:     { label: "sideways drift |Δz|",fn: (t) => Math.abs(t.final[2] - t.start[2]) },
+  travel:       { label: "distance travelled", fn: (t) => Math.hypot(t.final[0] - t.start[0], t.final[2] - t.start[2]) },
+  peak_height:  { label: "peak height gained", fn: (t) => t.maxH - t.start[1] },
+  mean_height:  { label: "average height",     fn: (t) => t.meanH },
+  final_height: { label: "height at the end",  fn: (t) => t.final[1] },
+  to_target:    { label: "progress to target", fn: (t, g) => Math.hypot(t.start[0] - g[0], t.start[2] - g[1]) - Math.hypot(t.final[0] - g[0], t.final[2] - g[1]) },
+  effort:       { label: "muscle effort",      fn: (t) => t.effort },
+};
+const GOAL_PRESETS = {
+  walk:  { name: "walk",  weights: { forward: 1, sideways: -0.3 }, target: [3, 3] },
+  jump:  { name: "jump",  weights: { peak_height: 1 },             target: [3, 3] },
+  stand: { name: "stand", weights: { mean_height: 1, travel: -0.5 }, target: [3, 3] },
+  reach: { name: "reach", weights: { to_target: 1 },               target: [3, 3] },
+};
+function scoreOf(traj, goal) {
+  let s = 0;
+  for (const [term, w] of Object.entries(goal.weights)) {
+    if (w) s += w * GOAL_TERMS[term].fn(traj, goal.target);
+  }
+  return s;
+}
+function fitness(morph, ctrl, goal, duration) {
+  const t = rollout(morph, ctrl, duration);
+  return t.diverged ? DIVERGED_FITNESS : scoreOf(t, goal);
+}
+function describeGoal(goal) {
+  const parts = Object.entries(goal.weights)
+    .filter(([, w]) => w)
+    .map(([term, w]) => `${w > 0 ? "+" : "−"}${Math.abs(w)}·${term}`);
+  return parts.length ? "score = " + parts.join(" ") : "score = 0  (nothing is weighted yet)";
+}
+
+/* ---- seeded RNG + evolution strategy ----------------------------- */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rand) {
+  let u = 0, v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const toVector = (c) => [c.freq, ...c.amps, ...c.phases];
+function fromVector(vec, n) {
+  return {
+    freq: clamp(vec[0], FREQ_MIN, FREQ_MAX),
+    amps: vec.slice(1, 1 + n).map((v) => clamp(v, -AMP_LIMIT, AMP_LIMIT)),
+    phases: vec.slice(1 + n, 1 + 2 * n).map((v) => ((v % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)),
+  };
+}
+
+/* ==================================================================
+   Application state
+   ================================================================== */
+const PRESET_GAITS = {
+  "quadruped/walk": { freq: 1.9433, amps: [0.2178, -0.4009, -0.177, -0.2336, -0.269, -0.3218, 0.288, -0.1387, 0.0949, -0.1158, -0.0119, 0.3432], phases: [4.2587, 2.4229, 3.5672, 0.8026, 4.7778, 2.8427, 3.3888, 5.3898, 4.7716, 5.5405, 3.3891, 3.2658] },
+  "quadruped/jump": { freq: 2.1585, amps: [0.2183, -0.0454, 0.4139, 0.2755, 0.2303, 0.3261, -0.0683, -0.385, 0.4836, -0.0492, 0.4987, 0.4984], phases: [0.7181, 1.9686, 2.6804, 3.3636, 4.9221, 2.7818, 0.7001, 1.6237, 4.4869, 1.0049, 4.9335, 4.9353] },
+  "blob/walk": { freq: 1.7964, amps: [-0.4624, -0.3198, -0.5, 0.384, 0.1983, 0.0489], phases: [4.2114, 3.4131, 0.6527, 4.7467, 3.8533, 1.2934] },
+  "blob/jump": { freq: 1.8579, amps: [0.4372, 0.2912, -0.311, 0.4216, -0.1488, -0.0355], phases: [4.8945, 1.8215, 3.1919, 4.3992, 5.7912, 1.3586] },
+  "worm/walk": { freq: 1.5858, amps: [-0.3304, -0.4889, 0.2804, -0.4421, 0.0295, -0.1136, 0.0918, -0.4207, -0.1745], phases: [4.0423, 2.7766, 1.7571, 1.3673, 4.8327, 4.9683, 1.8924, 3.3561, 1.1883] },
+};
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = {
+  goal: { name: "walk", weights: { ...GOAL_PRESETS.walk.weights }, target: [3, 3] },
+  ctrl: { freq: 1.2, amps: [], phases: [] },
+  duration: 8.0,
+  train: { population: 18, generations: 30, sigma: 0.28 },
+  playing: !reduceMotion,
+  hoverMuscle: -1,
+  hoverNode: -1,
+  training: false,
+  history: [],
+  meanHistory: [],
+  trainedGens: 0,
+  baseName: "quadruped",
+};
+
+let morph = BASE_BODIES.quadruped();
+// The editable source of truth; `morph` is rebuilt from it on every edit.
+let draft = {
+  name: morph.name,
+  positions: morph.positions.map((p) => p.slice()),
+  springs: morph.springs.map((s) => ({ a: s.a, b: s.b, muscle: s.muscle })),
+};
+let sim = new Sim(morph);
+let epStart = sim.com(), epMaxH = epStart[1], epSumH = 0, epSumE = 0, epTicks = 0;
+
+function restartEpisode() {
+  sim = new Sim(morph);
+  epStart = sim.com(); epMaxH = epStart[1]; epSumH = 0; epSumE = 0; epTicks = 0;
+}
+function fitControllerToBody() {
+  const n = morph.numMuscles;
+  const amps = state.ctrl.amps.slice(0, n);
+  const phases = state.ctrl.phases.slice(0, n);
+  while (amps.length < n) { amps.push(0); phases.push(0); }
+  state.ctrl.amps = amps; state.ctrl.phases = phases;
+}
+
+/** Rebuild the live body from the draft; on failure keep the last good one. */
+function applyDraft() {
+  const alert = $("body-alert");
+  try {
+    const next = buildBody(draft.name, draft.positions,
+      draft.springs.map((s) => [s.a, s.b, s.muscle]));
+    morph = next;
+    fitControllerToBody();
+    restartEpisode();
+    buildBank(); syncControls();
+    alert.hidden = true;
+    $("body-stats").textContent =
+      `${morph.positions.length} nodes · ${morph.springs.length} springs · ${morph.numMuscles} muscles`;
+    return true;
+  } catch (err) {
+    alert.hidden = false;
+    alert.classList.remove("ok");
+    alert.textContent = err instanceof MorphologyError
+      ? err.message + " The stage is still showing the last body that worked."
+      : String(err);
+    return false;
+  }
+}
+
+function loadBase(name) {
+  const b = BASE_BODIES[name]();
+  state.baseName = name;
+  draft = {
+    name,
+    positions: b.positions.map((p) => p.slice()),
+    springs: b.springs.map((s) => ({ a: s.a, b: s.b, muscle: s.muscle })),
+  };
+  state.ctrl = { freq: 1.2, amps: [], phases: [] };
+  state.history = []; state.meanHistory = [];
+  applyDraft(); buildNodeTable(); buildSpringTable(); buildBaseSeg(); buildPresetSeg(); drawChart();
+}
+
+/* ==================================================================
+   3D renderer
+   ================================================================== */
+const stage = $("stage");
+const ctx = stage.getContext("2d");
+const cam = { yaw: -0.62, pitch: 0.30, dist: 6.2, followX: 0 };
+let dpr = 1, W = 0, H = 0;
+
+function resize() {
+  const rect = stage.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.max(1, Math.round(rect.width)); H = Math.max(1, Math.round(rect.height));
+  stage.width = W * dpr; stage.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+new ResizeObserver(resize).observe(stage);
+
+function buildCamera() {
+  const tx = cam.followX, ty = 0.55, tz = 0;
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const eye = [tx + cam.dist * cp * Math.sin(cam.yaw), ty + cam.dist * sp, tz + cam.dist * cp * Math.cos(cam.yaw)];
+  let f = [tx - eye[0], ty - eye[1], tz - eye[2]];
+  const fl = Math.hypot(...f); f = f.map((v) => v / fl);
+  // right = normalize(cross(worldUp, forward)) with worldUp = (0, 1, 0),
+  // then up = cross(forward, right) — in that order, or the view flips
+  // vertically and shadows render above the body instead of beneath it.
+  let r = [f[2], 0, -f[0]];
+  const rl = Math.hypot(...r); r = r.map((v) => v / rl);
+  const u = [f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0]];
+  const focal = (H / 2) / Math.tan((48 * Math.PI / 180) / 2);
+  return { eye, r, u, f, focal };
+}
+function toCam(p, c) {
+  const dx = p[0] - c.eye[0], dy = p[1] - c.eye[1], dz = p[2] - c.eye[2];
+  return {
+    x: dx * c.r[0] + dy * c.r[1] + dz * c.r[2],
+    y: dx * c.u[0] + dy * c.u[1] + dz * c.u[2],
+    z: dx * c.f[0] + dy * c.f[1] + dz * c.f[2],
+  };
+}
+const toScreen = (v, c) => ({ x: W / 2 + c.focal * v.x / v.z, y: H / 2 - c.focal * v.y / v.z, z: v.z });
+const NEAR = 0.12;
+function clipSeg(a, b) {
+  const ain = a.z > NEAR, bin = b.z > NEAR;
+  if (!ain && !bin) return null;
+  if (ain && bin) return [a, b];
+  const t = (NEAR - a.z) / (b.z - a.z);
+  const mid = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR };
+  return ain ? [a, mid] : [mid, b];
+}
+function clipPolyNear(poly) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const ain = a.z > NEAR, bin = b.z > NEAR;
+    if (ain) out.push(a);
+    if (ain !== bin) {
+      const t = (NEAR - a.z) / (b.z - a.z);
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR });
+    }
+  }
+  return out;
+}
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function drawGround(c) {
+  const gridCol = css("--stage-grid"), majorCol = css("--stage-grid-major");
+  const cx = Math.round(cam.followX);
+  const R = 13, F = 90;
+
+  const quad = clipPolyNear([
+    toCam([cx - F, 0, -F], c), toCam([cx + F, 0, -F], c),
+    toCam([cx + F, 0, F], c), toCam([cx - F, 0, F], c),
+  ]);
+  if (quad.length > 2) {
+    ctx.fillStyle = css("--stage-floor");
+    ctx.beginPath();
+    quad.forEach((v, i) => {
+      const s = toScreen(v, c);
+      i === 0 ? ctx.moveTo(s.x, s.y) : ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath(); ctx.fill();
+  }
+
+  ctx.lineWidth = 1;
+  for (let gx = cx - R; gx <= cx + R; gx++) {
+    const seg = clipSeg(toCam([gx, 0, -R], c), toCam([gx, 0, R], c));
+    if (!seg) continue;
+    const major = gx % 5 === 0;
+    ctx.strokeStyle = major ? majorCol : gridCol;
+    ctx.globalAlpha = (major ? 1 : 0.72) * (1 - Math.min(1, Math.abs(gx - cam.followX) / (R + 5)));
+    const a = toScreen(seg[0], c), b = toScreen(seg[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (let gz = -R; gz <= R; gz++) {
+    const seg = clipSeg(toCam([cx - R, 0, gz], c), toCam([cx + R, 0, gz], c));
+    if (!seg) continue;
+    ctx.strokeStyle = gz % 5 === 0 ? majorCol : gridCol;
+    ctx.globalAlpha = (gz % 5 === 0 ? 1 : 0.72) * (1 - Math.min(1, Math.abs(gz) / (R + 5)));
+    const a = toScreen(seg[0], c), b = toScreen(seg[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.font = '500 11px "IBM Plex Mono", monospace';
+  ctx.fillStyle = css("--ink-3");
+  ctx.textAlign = "center";
+  for (let gx = cx - R; gx <= cx + R; gx += 5) {
+    const v = toCam([gx, 0, 0.35], c);
+    if (v.z <= NEAR) continue;
+    const s = toScreen(v, c);
+    if (s.x < -40 || s.x > W + 40) continue;
+    ctx.globalAlpha = 0.75;
+    ctx.fillText(gx + " m", s.x, s.y);
+  }
+  ctx.globalAlpha = 1;
+
+  const line = clipSeg(toCam([0, 0.005, -2.2], c), toCam([0, 0.005, 2.2], c));
+  if (line) {
+    ctx.strokeStyle = css("--accent"); ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    const a = toScreen(line[0], c), b = toScreen(line[1], c);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
+  if (state.goal.weights.to_target) {
+    const [tx, tz] = state.goal.target;
+    ctx.strokeStyle = css("--accent"); ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= 48; i++) {
+      const th = (i / 48) * Math.PI * 2;
+      const v = toCam([tx + 0.5 * Math.cos(th), 0.01, tz + 0.5 * Math.sin(th)], c);
+      if (v.z <= NEAR) { started = false; continue; }
+      const s = toScreen(v, c);
+      if (!started) { ctx.moveTo(s.x, s.y); started = true; } else ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  // atmospheric fade so distance dissolves into sky instead of ending
+  const fh = [c.f[0], 0, c.f[2]];
+  const fl = Math.hypot(fh[0], fh[2]);
+  if (fl > 1e-6) {
+    fh[0] /= fl; fh[2] /= fl;
+    const num = fh[0] * c.u[0] + fh[2] * c.u[2];
+    const den = fh[0] * c.f[0] + fh[2] * c.f[2];
+    if (Math.abs(den) > 1e-6) {
+      const horizonY = H / 2 - c.focal * (num / den);
+      const fog = ctx.createLinearGradient(0, horizonY - 55, 0, horizonY + 150);
+      fog.addColorStop(0, css("--stage-sky-1"));
+      fog.addColorStop(1, css("--stage-sky-1") + "00");
+      ctx.fillStyle = fog;
+      ctx.fillRect(0, 0, W, Math.max(0, horizonY + 150));
+    }
+  }
+}
+
+function render() {
+  const c = buildCamera();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, css("--stage-sky-1"));
+  g.addColorStop(1, css("--stage-sky-2"));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.lineCap = "round";
+
+  drawGround(c);
+
+  ctx.fillStyle = css("--shadow");
+  for (let i = 0; i < sim.px.length; i++) {
+    const h = sim.py[i];
+    const v = toCam([sim.px[i], 0.002, sim.pz[i]], c);
+    if (v.z <= NEAR) continue;
+    const s = toScreen(v, c);
+    const rad = (c.focal * 0.11 / v.z) * (1 + h * 0.55);
+    ctx.globalAlpha = Math.max(0, 0.30 - h * 0.13);
+    ctx.beginPath(); ctx.ellipse(s.x, s.y, rad, rad * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const items = [];
+  const contractCol = css("--contract"), extendCol = css("--extend"), accentCol = css("--accent");
+  let mi = 0;
+  for (let si = 0; si < morph.springs.length; si++) {
+    const s = morph.springs[si];
+    const A = toCam([sim.px[s.a], sim.py[s.a], sim.pz[s.a]], c);
+    const B = toCam([sim.px[s.b], sim.py[s.b], sim.pz[s.b]], c);
+    const muscleNo = s.muscle ? mi++ : -1;
+    const seg = clipSeg(A, B);
+    if (!seg) continue;
+    let colour = css("--bone-dark"), width = 0.028, alpha = 0.9;
+    if (s.muscle) {
+      const strain = (sim.rest[si] / s.rest - 1) / AMP_LIMIT;
+      const t = clamp(Math.abs(strain), 0, 1);
+      colour = strain < 0 ? contractCol : extendCol;
+      alpha = 0.42 + 0.58 * t;
+      width = 0.032 + 0.030 * t;
+      if (muscleNo === state.hoverMuscle) { colour = accentCol; alpha = 1; width = 0.075; }
+    }
+    items.push({ z: (A.z + B.z) / 2, kind: "spring", seg, colour, width, alpha });
+  }
+  for (let i = 0; i < sim.px.length; i++) {
+    const v = toCam([sim.px[i], sim.py[i], sim.pz[i]], c);
+    if (v.z <= NEAR) continue;
+    items.push({ z: v.z, kind: "node", v, lit: i === state.hoverNode });
+  }
+  items.sort((a, b) => b.z - a.z);
+
+  for (const it of items) {
+    if (it.kind === "spring") {
+      const a = toScreen(it.seg[0], c), b = toScreen(it.seg[1], c);
+      ctx.globalAlpha = it.alpha;
+      ctx.strokeStyle = it.colour;
+      ctx.lineWidth = Math.max(1.2, c.focal * it.width / Math.max(it.z, NEAR));
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    } else {
+      const s = toScreen(it.v, c);
+      const rad = Math.max(2, c.focal * (it.lit ? 0.125 : 0.085) / it.v.z);
+      ctx.globalAlpha = 1;
+      if (it.lit) {
+        ctx.fillStyle = css("--accent");
+        ctx.beginPath(); ctx.arc(s.x, s.y, rad, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const grad = ctx.createRadialGradient(s.x - rad * 0.35, s.y - rad * 0.4, rad * 0.1, s.x, s.y, rad);
+        grad.addColorStop(0, css("--bone"));
+        grad.addColorStop(1, css("--bone-dark"));
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(s.x, s.y, rad, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  if (sim.diverged) {
+    ctx.fillStyle = css("--contract");
+    ctx.font = '600 13px "IBM Plex Sans Condensed", sans-serif';
+    ctx.textAlign = "center";
+    ctx.fillText("Simulation blew up — soften the amplitudes, or lower stiffness in the World tab.", W / 2, H - 26);
+  }
+}
+
+let dragging = false, lastX = 0, lastY = 0;
+stage.addEventListener("pointerdown", (e) => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  cam.yaw -= (e.clientX - lastX) * 0.006;
+  cam.pitch = clamp(cam.pitch + (e.clientY - lastY) * 0.005, 0.06, 1.25);
+  lastX = e.clientX; lastY = e.clientY;
+});
+stage.addEventListener("pointerup", (e) => { dragging = false; stage.releasePointerCapture(e.pointerId); });
+stage.addEventListener("pointercancel", () => { dragging = false; });
+stage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  cam.dist = clamp(cam.dist * (1 + Math.sign(e.deltaY) * 0.09), 2.2, 18);
+}, { passive: false });
+
+/* ==================================================================
+   Fitness chart
+   ================================================================== */
+const chart = $("chart"), cctx = chart.getContext("2d");
+let chartHover = -1;
+function drawChart() {
+  const rect = chart.getBoundingClientRect();
+  const cw = Math.max(1, Math.round(rect.width)), ch = Math.max(1, Math.round(rect.height));
+  chart.width = cw * dpr; chart.height = ch * dpr;
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cctx.clearRect(0, 0, cw, ch);
+
+  const best = state.history, mean = state.meanHistory;
+  const padL = 44, padR = 12, padT = 10, padB = 18;
+  const plotW = cw - padL - padR, plotH = ch - padT - padB;
+
+  if (best.length === 0) {
+    cctx.fillStyle = css("--ink-3");
+    cctx.font = '400 11px "IBM Plex Sans", sans-serif';
+    cctx.textAlign = "center";
+    cctx.fillText("Fitness per generation appears here", cw / 2, ch / 2 + 3);
+    return;
+  }
+
+  const all = best.concat(mean).filter(Number.isFinite);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi - lo < 1e-6) { hi += 0.5; lo -= 0.5; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const X = (i) => padL + (best.length === 1 ? plotW / 2 : (i / (best.length - 1)) * plotW);
+  const Y = (v) => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
+
+  cctx.strokeStyle = css("--line"); cctx.lineWidth = 1;
+  cctx.fillStyle = css("--ink-3");
+  cctx.font = '400 10px "IBM Plex Mono", monospace';
+  cctx.textAlign = "right";
+  for (let k = 0; k <= 2; k++) {
+    const v = lo + (hi - lo) * (k / 2), y = Math.round(Y(v)) + 0.5;
+    cctx.globalAlpha = 0.6;
+    cctx.beginPath(); cctx.moveTo(padL, y); cctx.lineTo(cw - padR, y); cctx.stroke();
+    cctx.globalAlpha = 1;
+    cctx.fillText(v.toFixed(1), padL - 6, y + 3);
+  }
+
+  cctx.strokeStyle = css("--ink-3"); cctx.lineWidth = 1.5; cctx.setLineDash([3, 3]);
+  cctx.beginPath();
+  let started = false;
+  mean.forEach((v, i) => {
+    if (!Number.isFinite(v)) { started = false; return; }
+    const y = Y(clamp(v, lo, hi));
+    started ? cctx.lineTo(X(i), y) : cctx.moveTo(X(i), y);
+    started = true;
+  });
+  cctx.stroke(); cctx.setLineDash([]);
+
+  const accent = css("--accent");
+  const grad = cctx.createLinearGradient(0, padT, 0, padT + plotH);
+  grad.addColorStop(0, accent + "38");
+  grad.addColorStop(1, accent + "05");
+  cctx.beginPath();
+  cctx.moveTo(X(0), padT + plotH);
+  best.forEach((v, i) => cctx.lineTo(X(i), Y(v)));
+  cctx.lineTo(X(best.length - 1), padT + plotH);
+  cctx.closePath(); cctx.fillStyle = grad; cctx.fill();
+
+  cctx.strokeStyle = accent; cctx.lineWidth = 2; cctx.beginPath();
+  best.forEach((v, i) => (i === 0 ? cctx.moveTo(X(i), Y(v)) : cctx.lineTo(X(i), Y(v))));
+  cctx.stroke();
+
+  const li = best.length - 1;
+  cctx.fillStyle = accent;
+  cctx.beginPath(); cctx.arc(X(li), Y(best[li]), 3.5, 0, Math.PI * 2); cctx.fill();
+  cctx.strokeStyle = css("--surface-2"); cctx.lineWidth = 2; cctx.stroke();
+
+  if (chartHover >= 0 && chartHover < best.length) {
+    const x = X(chartHover);
+    cctx.strokeStyle = css("--ink-3"); cctx.globalAlpha = 0.5; cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.moveTo(x, padT); cctx.lineTo(x, padT + plotH); cctx.stroke();
+    cctx.globalAlpha = 1;
+    const mv = mean[chartHover];
+    const txt = "gen " + chartHover + "  best " + best[chartHover].toFixed(2) +
+                "  mean " + (Number.isFinite(mv) ? mv.toFixed(2) : "unstable");
+    cctx.font = '500 10px "IBM Plex Mono", monospace';
+    const tw = cctx.measureText(txt).width + 10;
+    const tx = clamp(x - tw / 2, 2, cw - tw - 2);
+    cctx.fillStyle = css("--surface");
+    cctx.strokeStyle = css("--line");
+    cctx.beginPath(); cctx.rect(tx, 1, tw, 16); cctx.fill(); cctx.stroke();
+    cctx.fillStyle = css("--ink"); cctx.textAlign = "left";
+    cctx.fillText(txt, tx + 5, 12);
+  }
+}
+chart.addEventListener("pointermove", (e) => {
+  const rect = chart.getBoundingClientRect();
+  const n = state.history.length;
+  if (!n) return;
+  const padL = 44, padR = 12;
+  const frac = (e.clientX - rect.left - padL) / Math.max(1, rect.width - padL - padR);
+  chartHover = clamp(Math.round(frac * (n - 1)), 0, n - 1);
+  drawChart();
+});
+chart.addEventListener("pointerleave", () => { chartHover = -1; drawChart(); });
+
+/* ==================================================================
+   Editors
+   ================================================================== */
+function buildBaseSeg() {
+  const seg = $("base-seg");
+  seg.textContent = "";
+  for (const name of Object.keys(BASE_BODIES)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = name[0].toUpperCase() + name.slice(1);
+    b.setAttribute("aria-pressed", String(name === state.baseName && isPristine(name)));
+    b.addEventListener("click", () => loadBase(name));
+    seg.appendChild(b);
+  }
+}
+/** True when the draft still matches the named starting body exactly. */
+function isPristine(name) {
+  const b = BASE_BODIES[name]();
+  if (b.positions.length !== draft.positions.length) return false;
+  if (b.springs.length !== draft.springs.length) return false;
+  for (let i = 0; i < b.positions.length; i++)
+    for (let k = 0; k < 3; k++)
+      if (Math.abs(b.positions[i][k] - draft.positions[i][k]) > 1e-9) return false;
+  for (let i = 0; i < b.springs.length; i++) {
+    const x = b.springs[i], y = draft.springs[i];
+    if (x.a !== y.a || x.b !== y.b || x.muscle !== y.muscle) return false;
+  }
+  return true;
+}
+
+function markEdited() {
+  if (!isPristine(state.baseName)) draft.name = state.baseName + "-edited";
+  buildBaseSeg(); buildPresetSeg();
+}
+
+function buildNodeTable() {
+  const tbl = $("node-tbl");
+  tbl.textContent = "";
+  draft.positions.forEach((p, i) => {
+    const row = document.createElement("div");
+    row.className = "tbl-row";
+    row.addEventListener("pointerenter", () => { state.hoverNode = i; row.classList.add("lit"); });
+    row.addEventListener("pointerleave", () => { state.hoverNode = -1; row.classList.remove("lit"); });
+
+    const idx = document.createElement("span");
+    idx.className = "idx"; idx.textContent = String(i);
+    row.appendChild(idx);
+
+    ["x", "y", "z"].forEach((axis, k) => {
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.step = "0.05"; inp.value = String(p[k]);
+      inp.setAttribute("aria-label", `Node ${i} ${axis}`);
+      inp.addEventListener("input", () => {
+        const v = parseFloat(inp.value);
+        if (!Number.isFinite(v)) return;
+        draft.positions[i][k] = v;
+        if (applyDraft()) markEdited();
+      });
+      row.appendChild(inp);
+    });
+
+    const del = document.createElement("button");
+    del.className = "del"; del.type = "button"; del.textContent = "×";
+    del.setAttribute("aria-label", `Delete node ${i}`);
+    del.addEventListener("click", () => removeNode(i));
+    row.appendChild(del);
+    tbl.appendChild(row);
+  });
+}
+
+function removeNode(i) {
+  if (draft.positions.length <= 2) {
+    flashBodyAlert("A body needs at least 2 nodes.");
+    return;
+  }
+  draft.positions.splice(i, 1);
+  draft.springs = draft.springs
+    .filter((s) => s.a !== i && s.b !== i)
+    .map((s) => ({ a: s.a > i ? s.a - 1 : s.a, b: s.b > i ? s.b - 1 : s.b, muscle: s.muscle }));
+  if (!draft.springs.length) {
+    flashBodyAlert("Removing that node would leave no springs.");
+    loadBase(state.baseName);
+    return;
+  }
+  applyDraft(); buildNodeTable(); buildSpringTable(); markEdited();
+}
+
+function flashBodyAlert(msg) {
+  const alert = $("body-alert");
+  alert.hidden = false; alert.classList.remove("ok");
+  alert.textContent = msg;
+}
+
+function buildSpringTable() {
+  const tbl = $("spring-tbl");
+  tbl.textContent = "";
+  let muscleNo = 0;
+  draft.springs.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "tbl-row";
+    const thisMuscle = s.muscle ? muscleNo++ : -1;
+    row.addEventListener("pointerenter", () => {
+      if (thisMuscle >= 0) state.hoverMuscle = thisMuscle;
+      row.classList.add("lit");
+    });
+    row.addEventListener("pointerleave", () => { state.hoverMuscle = -1; row.classList.remove("lit"); });
+
+    const idx = document.createElement("span");
+    idx.className = "idx"; idx.textContent = String(i);
+    row.appendChild(idx);
+
+    ["a", "b"].forEach((end) => {
+      const sel = document.createElement("select");
+      sel.setAttribute("aria-label", `Spring ${i} ${end === "a" ? "from" : "to"} node`);
+      draft.positions.forEach((_, n) => {
+        const o = document.createElement("option");
+        o.value = String(n); o.textContent = String(n);
+        sel.appendChild(o);
+      });
+      sel.value = String(s[end]);
+      sel.addEventListener("change", () => {
+        const prev = s[end];
+        s[end] = parseInt(sel.value, 10);
+        if (!applyDraft()) { s[end] = prev; sel.value = String(prev); applyDraft(); }
+        else { buildSpringTable(); markEdited(); }
+      });
+      row.appendChild(sel);
+    });
+
+    const tog = document.createElement("button");
+    tog.className = "mtoggle"; tog.type = "button"; tog.textContent = "M";
+    tog.setAttribute("aria-pressed", String(s.muscle));
+    tog.setAttribute("aria-label", `Spring ${i} is a muscle`);
+    tog.addEventListener("click", () => {
+      s.muscle = !s.muscle;
+      applyDraft(); buildSpringTable(); markEdited();
+    });
+    row.appendChild(tog);
+
+    const del = document.createElement("button");
+    del.className = "del"; del.type = "button"; del.textContent = "×";
+    del.setAttribute("aria-label", `Delete spring ${i}`);
+    del.addEventListener("click", () => {
+      if (draft.springs.length <= 1) { flashBodyAlert("A body needs at least one spring."); return; }
+      draft.springs.splice(i, 1);
+      applyDraft(); buildSpringTable(); markEdited();
+    });
+    row.appendChild(del);
+    tbl.appendChild(row);
+  });
+}
+
+$("add-node").addEventListener("click", () => {
+  // place it a step along +x from the last node, lifted clear of the floor
+  const last = draft.positions[draft.positions.length - 1];
+  draft.positions.push([+(last[0] + 0.4).toFixed(3), Math.max(0.05, last[1]), +last[2].toFixed(3)]);
+  const i = draft.positions.length - 1;
+  draft.springs.push({ a: i - 1, b: i, muscle: true });
+  applyDraft(); buildNodeTable(); buildSpringTable(); markEdited();
+});
+
+$("add-spring").addEventListener("click", () => {
+  const n = draft.positions.length;
+  const has = new Set(draft.springs.map((s) => Math.min(s.a, s.b) + ":" + Math.max(s.a, s.b)));
+  for (let a = 0; a < n; a++) {
+    for (let b = a + 1; b < n; b++) {
+      if (!has.has(a + ":" + b)) {
+        draft.springs.push({ a, b, muscle: true });
+        applyDraft(); buildSpringTable(); markEdited();
+        return;
+      }
+    }
+  }
+  flashBodyAlert("Every pair of nodes is already joined — add a node first.");
+});
+
+/* ---- goal editor ------------------------------------------------- */
+function buildGoalSeg() {
+  const seg = $("goal-seg");
+  seg.textContent = "";
+  for (const [key, preset] of Object.entries(GOAL_PRESETS)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = key[0].toUpperCase() + key.slice(1);
+    b.setAttribute("aria-pressed", String(state.goal.name === key));
+    b.addEventListener("click", () => {
+      state.goal = { name: key, weights: { ...preset.weights }, target: state.goal.target.slice() };
+      state.history = []; state.meanHistory = [];
+      buildGoalSeg(); buildTermList(); drawChart();
+      $("train-readout").textContent = "Goal changed — the fitness history is cleared. Evolve to search for this one.";
+    });
+    seg.appendChild(b);
+  }
+}
+
+function buildTermList() {
+  const list = $("term-list");
+  list.textContent = "";
+  for (const [key, term] of Object.entries(GOAL_TERMS)) {
+    const row = document.createElement("div");
+    row.className = "term";
+    const w = state.goal.weights[key] || 0;
+    if (w) row.classList.add("on");
+
+    const name = document.createElement("span");
+    name.className = "name"; name.textContent = term.label;
+
+    const slider = document.createElement("input");
+    slider.type = "range"; slider.min = "-2"; slider.max = "2"; slider.step = "0.05";
+    slider.value = String(w);
+    slider.setAttribute("aria-label", `Weight for ${term.label}`);
+
+    const num = document.createElement("span");
+    num.className = "w"; num.textContent = w.toFixed(2);
+
+    slider.addEventListener("input", () => {
+      const v = parseFloat(slider.value);
+      num.textContent = v.toFixed(2);
+      row.classList.toggle("on", v !== 0);
+      if (v === 0) delete state.goal.weights[key];
+      else state.goal.weights[key] = v;
+      state.goal.name = "custom";
+      buildGoalSeg();
+      $("goal-formula").textContent = describeGoal(state.goal);
+    });
+
+    row.append(name, slider, num);
+    list.appendChild(row);
+  }
+  $("goal-formula").textContent = describeGoal(state.goal);
+}
+
+$("target-x").addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  if (Number.isFinite(v)) state.goal.target[0] = v;
+});
+$("target-z").addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  if (Number.isFinite(v)) state.goal.target[1] = v;
+});
+
+/* ---- world editor ------------------------------------------------ */
+const PHYS_FIELDS = [
+  { key: "gravity", label: "Gravity", min: 0, max: 25, step: 0.01, unit: " m/s²" },
+  { key: "stiffness", label: "Spring stiffness", min: 200, max: 4000, step: 10, unit: " N/m" },
+  { key: "spring_damping", label: "Spring damping", min: 0, max: 60, step: 0.5, unit: "" },
+  { key: "node_mass", label: "Node mass", min: 0.2, max: 5, step: 0.05, unit: " kg" },
+  { key: "ground_friction", label: "Ground grip", min: 0.5, max: 1, step: 0.005, unit: "", invert: true },
+  { key: "ground_bounce", label: "Bounciness", min: 0, max: 0.9, step: 0.01, unit: "" },
+  { key: "air_drag", label: "Air drag", min: 0, max: 2, step: 0.01, unit: "" },
+];
+
+function sliderRow(parent, opts, get, set) {
+  const wrap = document.createElement("div");
+  wrap.className = "slider-line";
+  const cap = document.createElement("label");
+  cap.className = "cap";
+  const b = document.createElement("b");
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = String(opts.min); input.max = String(opts.max); input.step = String(opts.step);
+  input.value = String(get());
+  input.id = "phys-" + opts.key;
+  cap.htmlFor = input.id;
+  cap.append(document.createTextNode(opts.label + " "), b);
+  const show = () => {
+    const v = get();
+    b.textContent = (opts.decimals !== undefined ? v.toFixed(opts.decimals)
+      : Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)) + opts.unit;
+  };
+  show();
+  input.addEventListener("input", () => { set(parseFloat(input.value)); show(); });
+  wrap.append(cap, input);
+  parent.appendChild(wrap);
+  return { input, show };
+}
+
+const physControls = {};
+function buildPhysList() {
+  const list = $("phys-list");
+  list.textContent = "";
+  for (const f of PHYS_FIELDS) {
+    physControls[f.key] = sliderRow(list, f, () => PHYS[f.key], (v) => {
+      PHYS[f.key] = v;
+      restartEpisode();
+      checkStability();
+    });
+  }
+
+  const ep = $("episode-list");
+  ep.textContent = "";
+  sliderRow(ep, { key: "duration", label: "Episode length", min: 2, max: 15, step: 0.5, unit: " s", decimals: 1 },
+    () => state.duration, (v) => { state.duration = v; restartEpisode(); });
+
+  const se = $("search-list");
+  se.textContent = "";
+  sliderRow(se, { key: "population", label: "Population", min: 6, max: 40, step: 1, unit: "", decimals: 0 },
+    () => state.train.population, (v) => { state.train.population = Math.round(v); });
+  sliderRow(se, { key: "generations", label: "Generations", min: 5, max: 60, step: 1, unit: "", decimals: 0 },
+    () => state.train.generations, (v) => { state.train.generations = Math.round(v); updateTrainButton(); });
+  sliderRow(se, { key: "sigma", label: "Mutation size", min: 0.05, max: 0.6, step: 0.01, unit: "" },
+    () => state.train.sigma, (v) => { state.train.sigma = v; });
+}
+
+/** Report a run the integrator couldn't hold together, with the likely cause. */
+function checkStability() {
+  const alert = $("phys-alert");
+  if (!sim || !sim.diverged) { alert.hidden = true; return; }
+  const causes = [];
+  if (PHYS.stiffness > 2500) causes.push("stiffness this high");
+  if (PHYS.gravity > 18) causes.push("gravity this strong");
+  if (PHYS.node_mass < 0.5) causes.push("nodes this light");
+  if (PHYS.ground_bounce > 0.6) causes.push("ground this bouncy");
+  alert.hidden = false;
+  alert.textContent = causes.length
+    ? `The run blew up — ${causes.join(" and ")} needs a finer timestep than the fixed 5 ms. Ease that back, or soften the muscle amplitudes.`
+    : "The run blew up. Soften the muscle amplitudes, or check for very short springs in the body.";
+}
+
+$("phys-reset").addEventListener("click", () => {
+  PHYS = { ...EARTH };
+  for (const f of PHYS_FIELDS) {
+    physControls[f.key].input.value = String(PHYS[f.key]);
+    physControls[f.key].show();
+  }
+  restartEpisode(); checkStability();
+});
+
+/* ---- muscle bank ------------------------------------------------- */
+function buildBank() {
+  const bank = $("bank");
+  bank.textContent = "";
+  $("muscle-count").textContent = String(morph.numMuscles);
+  if (!morph.numMuscles) {
+    const p = document.createElement("p");
+    p.className = "note";
+    p.textContent = "This body has no muscles yet — toggle M on a spring in the Body tab to actuate it.";
+    bank.appendChild(p);
+    return;
+  }
+  for (let i = 0; i < morph.numMuscles; i++) {
+    const row = document.createElement("div");
+    row.className = "muscle";
+    row.addEventListener("pointerenter", () => { state.hoverMuscle = i; row.classList.add("lit"); });
+    row.addEventListener("pointerleave", () => { state.hoverMuscle = -1; row.classList.remove("lit"); });
+
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    const dot = document.createElement("i");
+    dot.className = "dot"; dot.id = "dot-" + i;
+    tag.append(dot, document.createTextNode("M" + (i + 1)));
+
+    const ampNum = document.createElement("span");
+    ampNum.className = "num"; ampNum.id = "amp-num-" + i;
+    const phNum = document.createElement("span");
+    phNum.className = "num"; phNum.id = "phase-num-" + i;
+
+    const amp = document.createElement("input");
+    amp.type = "range"; amp.min = "-0.5"; amp.max = "0.5"; amp.step = "0.01";
+    amp.value = String(state.ctrl.amps[i] ?? 0);
+    amp.id = "amp-" + i;
+    amp.setAttribute("aria-label", `Muscle ${i + 1} amplitude`);
+    amp.addEventListener("input", () => {
+      state.ctrl.amps[i] = parseFloat(amp.value);
+      ampNum.textContent = state.ctrl.amps[i].toFixed(2);
+    });
+    amp.addEventListener("pointerenter", () => { state.hoverMuscle = i; });
+
+    const ph = document.createElement("input");
+    ph.type = "range"; ph.min = "0"; ph.max = "6.28"; ph.step = "0.01";
+    ph.value = String(state.ctrl.phases[i] ?? 0);
+    ph.id = "phase-" + i;
+    ph.setAttribute("aria-label", `Muscle ${i + 1} phase, in radians`);
+    ph.addEventListener("input", () => {
+      state.ctrl.phases[i] = parseFloat(ph.value);
+      phNum.textContent = (state.ctrl.phases[i] / Math.PI).toFixed(1) + "π";
+    });
+    ph.addEventListener("pointerenter", () => { state.hoverMuscle = i; });
+
+    row.append(tag, amp, ampNum, ph, phNum);
+    bank.appendChild(row);
+  }
+}
+
+function syncControls() {
+  $("freq").value = String(state.ctrl.freq);
+  $("freq-val").textContent = state.ctrl.freq.toFixed(2) + " Hz";
+  for (let i = 0; i < morph.numMuscles; i++) {
+    const a = $("amp-" + i), p = $("phase-" + i);
+    const an = $("amp-num-" + i), pn = $("phase-num-" + i);
+    if (a) a.value = String(state.ctrl.amps[i]);
+    if (p) p.value = String(state.ctrl.phases[i]);
+    if (an) an.textContent = state.ctrl.amps[i].toFixed(2);
+    if (pn) pn.textContent = (state.ctrl.phases[i] / Math.PI).toFixed(1) + "π";
+  }
+}
+
+function buildPresetSeg() {
+  const seg = $("preset-seg");
+  seg.textContent = "";
+  const pristine = isPristine(state.baseName);
+  const keys = pristine
+    ? Object.keys(PRESET_GAITS).filter((k) => k.startsWith(state.baseName + "/"))
+    : [];
+  if (!keys.length) {
+    $("preset-note").textContent = pristine
+      ? "No trained example ships for this body — evolve one."
+      : "Trained examples fit the original bodies. You've edited this one, so evolve a gait for it instead.";
+    return;
+  }
+  $("preset-note").textContent = "Controllers evolved in the Python package and shipped with the page.";
+  for (const k of keys) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k.split("/")[1][0].toUpperCase() + k.split("/")[1].slice(1) + " gait";
+    b.addEventListener("click", () => {
+      const p = PRESET_GAITS[k];
+      state.ctrl = { freq: p.freq, amps: p.amps.slice(), phases: p.phases.slice() };
+      const goalKey = k.split("/")[1];
+      state.goal = { name: goalKey, weights: { ...GOAL_PRESETS[goalKey].weights }, target: state.goal.target.slice() };
+      restartEpisode(); syncControls(); buildGoalSeg(); buildTermList();
+      $("train-readout").textContent = "Loaded a controller evolved in the Python package.";
+    });
+    seg.appendChild(b);
+  }
+}
+
+/* ---- tabs -------------------------------------------------------- */
+const TABS = ["body", "goal", "world", "train"];
+function selectTab(name) {
+  for (const t of TABS) {
+    $("tab-" + t).setAttribute("aria-selected", String(t === name));
+    $("panel-" + t).hidden = t !== name;
+  }
+  if (name === "train") drawChart();
+}
+TABS.forEach((t) => {
+  $("tab-" + t).addEventListener("click", () => selectTab(t));
+  $("tab-" + t).addEventListener("keydown", (e) => {
+    const i = TABS.indexOf(t);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const next = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+      selectTab(next); $("tab-" + next).focus();
+    }
+  });
+});
+
+/* ---- live telemetry ---------------------------------------------- */
+let lastDiverged = false;
+function syncHud() {
+  const c = sim.com();
+  const dist = Math.hypot(c[0] - epStart[0], c[2] - epStart[2]);
+  $("hud-dist").textContent = dist.toFixed(2) + " m";
+  $("hud-height").textContent = c[1].toFixed(2) + " m";
+  $("hud-peak").textContent = epMaxH.toFixed(2) + " m";
+  const snapshot = {
+    start: epStart, final: c, maxH: epMaxH,
+    meanH: epTicks ? epSumH / epTicks : epStart[1],
+    effort: epTicks ? epSumE / epTicks : 0,
+  };
+  $("hud-score").textContent = scoreOf(snapshot, state.goal).toFixed(2);
+  if (sim.diverged !== lastDiverged) { lastDiverged = sim.diverged; checkStability(); }
+  const frac = clamp(sim.t / state.duration, 0, 1);
+  $("episode-fill").style.width = (frac * 100) + "%";
+  $("episode-clock").textContent = sim.t.toFixed(1) + " s / " + state.duration.toFixed(1) + " s";
+
+  let mi = 0;
+  for (let si = 0; si < morph.springs.length; si++) {
+    if (!morph.springs[si].muscle) continue;
+    const dot = $("dot-" + mi);
+    if (dot) {
+      const strain = (sim.rest[si] / morph.springs[si].rest - 1) / AMP_LIMIT;
+      dot.style.background = strain < 0 ? css("--contract") : css("--extend");
+      dot.style.opacity = String(0.25 + 0.75 * clamp(Math.abs(strain), 0, 1));
+    }
+    mi++;
+  }
+}
+
+/* ---- main loop --------------------------------------------------- */
+let lastFrame = performance.now();
+function frame(now) {
+  const dtReal = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  if (state.playing && !state.training) {
+    const steps = Math.round(dtReal / PHYS.dt);
+    const muscles = morph.muscleSprings, springs = morph.springs;
+    for (let i = 0; i < steps; i++) {
+      sim.step(state.ctrl.freq, state.ctrl.amps, state.ctrl.phases);
+      if (sim.diverged) break;
+      const c = sim.com();
+      epSumH += c[1]; epTicks++;
+      if (c[1] > epMaxH) epMaxH = c[1];
+      if (muscles.length) {
+        let e = 0;
+        for (const si of muscles) e += Math.abs(sim.rest[si] / springs[si].rest - 1);
+        epSumE += e / muscles.length;
+      }
+    }
+    if (sim.t >= state.duration) restartEpisode();
+  }
+  const c = sim.com();
+  cam.followX += (c[0] - cam.followX) * Math.min(1, dtReal * 3.5);
+  render();
+  syncHud();
+  requestAnimationFrame(frame);
+}
+
+/* ==================================================================
+   Training: one generation per animation frame
+   ================================================================== */
+let train = null;
+function updateTrainButton() {
+  if (state.training) return;
+  $("train-btn").textContent = state.history.length
+    ? `Evolve ${state.train.generations} more`
+    : `Evolve ${state.train.generations} generations`;
+}
+
+function startTraining() {
+  if (state.training) {
+    train = null; state.training = false;
+    updateTrainButton();
+    return;
+  }
+  if (!morph.numMuscles) {
+    $("train-readout").textContent = "This body has no muscles to evolve — make a spring a muscle first.";
+    return;
+  }
+  train = {
+    gen: 0,
+    mean: toVector(state.ctrl),
+    sigma: state.train.sigma,
+    best: { freq: state.ctrl.freq, amps: state.ctrl.amps.slice(), phases: state.ctrl.phases.slice() },
+    bestFit: fitness(morph, state.ctrl, state.goal, state.duration),
+    rand: mulberry32(Date.now() & 0xffff),
+    startFit: 0,
+    total: state.train.generations,
+  };
+  train.startFit = train.bestFit;
+  state.history = []; state.meanHistory = [];
+  state.training = true;
+  $("train-btn").textContent = "Stop";
+  $("train-readout").textContent = "Evolving…";
+  requestAnimationFrame(trainTick);
+}
+
+function trainTick() {
+  if (!state.training || !train) return;
+  const n = morph.numMuscles;
+  const POP = state.train.population;
+  const ELITE = Math.max(2, Math.round(POP * 0.25));
+  const scored = [];
+  for (let p = 0; p < POP; p++) {
+    const cand = train.mean.map((m) => m + gaussian(train.rand) * train.sigma);
+    const ctrl = fromVector(cand, n);
+    scored.push([fitness(morph, ctrl, state.goal, state.duration), toVector(ctrl)]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  const elite = scored.slice(0, ELITE);
+  train.mean = train.mean.map((_, i) => elite.reduce((s, e) => s + e[1][i], 0) / elite.length);
+  if (scored[0][0] > train.bestFit) {
+    train.bestFit = scored[0][0];
+    train.best = fromVector(scored[0][1], n);
+    state.ctrl = { freq: train.best.freq, amps: train.best.amps.slice(), phases: train.best.phases.slice() };
+    syncControls();
+    restartEpisode();
+  }
+  state.history.push(train.bestFit);
+  const stable = scored.filter((e) => e[0] > DIVERGED_FITNESS);
+  state.meanHistory.push(stable.length ? stable.reduce((s, e) => s + e[0], 0) / stable.length : NaN);
+  train.sigma *= 0.94;
+  train.gen++;
+  state.trainedGens++;
+
+  $("train-progress").style.width = (train.gen / train.total * 100) + "%";
+  drawChart();
+  const unstableStart = train.startFit <= DIVERGED_FITNESS;
+  const from = unstableStart ? "an unstable start" : train.startFit.toFixed(2);
+  $("train-readout").innerHTML =
+    `gen ${train.gen}/${train.total} &middot; best <span class="up">${train.bestFit.toFixed(2)}</span> (from ${from})`;
+
+  if (train.gen >= train.total) {
+    state.training = false;
+    updateTrainButton();
+    $("train-readout").innerHTML =
+      `Done: ${train.total} generations, fitness ${from} &rarr; ` +
+      `<span class="up">${train.bestFit.toFixed(2)}</span>. The sliders now hold what evolution found.`;
+    return;
+  }
+  requestAnimationFrame(trainTick);
+}
+
+/* ==================================================================
+   Experiment files — the same shape Python's load_experiment() reads
+   ================================================================== */
+let downloads = null;
+if (typeof window.claude?.use === "function") {
+  window.claude.use("downloads").then((d) => {
+    downloads = d;
+    if (!d) markSaveUnavailable();
+  }).catch(markSaveUnavailable);
+} else {
+  markSaveUnavailable();
+}
+function markSaveUnavailable() {
+  const btn = $("save-btn");
+  btn.disabled = true;
+  btn.title = "Saving a file isn't available in this view";
+}
+
+function experimentJSON() {
+  return {
+    format: "gait-lab-experiment",
+    version: 1,
+    duration: state.duration,
+    body: {
+      name: draft.name,
+      positions: draft.positions.map((p) => p.slice()),
+      springs: draft.springs.map((s) => ({ a: s.a, b: s.b, muscle: s.muscle })),
+    },
+    goal: { name: state.goal.name, weights: { ...state.goal.weights }, target: state.goal.target.slice() },
+    physics: { ...PHYS },
+    controller: {
+      num_muscles: morph.numMuscles,
+      morphology: draft.name,
+      freq: state.ctrl.freq,
+      amps: state.ctrl.amps.slice(),
+      phases: state.ctrl.phases.slice(),
+      generations_trained: state.trainedGens,
+    },
+  };
+}
+
+async function saveExperiment() {
+  if (!downloads) return;
+  const filename = `${draft.name}-${state.goal.name}.json`;
+  $("save-btn").disabled = true;
+  try {
+    await downloads.save({ filename, data: JSON.stringify(experimentJSON(), null, 2) });
+    $("train-readout").textContent = `Saved ${filename}.`;
+  } catch (err) {
+    const code = err && err.code;
+    if (code === "declined") {
+      $("train-readout").textContent = "Save cancelled — nothing was written.";
+    } else if (code === "rate_limited") {
+      $("train-readout").textContent = "A save prompt is already open. Finish that one, then try again.";
+    } else {
+      $("train-readout").textContent = "Saving isn't available in this view.";
+      markSaveUnavailable();
+      return;
+    }
+  } finally {
+    if (downloads) $("save-btn").disabled = false;
+  }
+}
+
+function loadExperiment(ev) {
+  const file = ev.target.files[0];
+  ev.target.value = "";
+  if (!file) return;
+  file.text().then((text) => {
+    let d;
+    try { d = JSON.parse(text); } catch { fileError("That file isn't valid JSON."); return; }
+    if (!d || d.format !== "gait-lab-experiment" || !d.body) {
+      fileError("That file isn't a Gait Lab experiment.");
+      return;
+    }
+    let candidate;
+    try {
+      candidate = buildBody(d.body.name || "loaded", d.body.positions,
+        d.body.springs.map((s) => [s.a, s.b, s.muscle]));
+    } catch (err) {
+      fileError("The body in that file can't be simulated: " + err.message);
+      return;
+    }
+    const ctl = d.controller;
+    if (ctl && ctl.amps && ctl.amps.length !== candidate.numMuscles) {
+      fileError(`That file's controller drives ${ctl.amps.length} muscles but its body has ${candidate.numMuscles}.`);
+      return;
+    }
+
+    draft = {
+      name: d.body.name || "loaded",
+      positions: d.body.positions.map((p) => p.slice()),
+      springs: d.body.springs.map((s) => ({ a: s.a, b: s.b, muscle: !!s.muscle })),
+    };
+    state.baseName = BASE_BODIES[draft.name] ? draft.name : state.baseName;
+    if (d.physics) PHYS = { ...EARTH, ...d.physics };
+    if (d.goal) {
+      const weights = {};
+      for (const [k, v] of Object.entries(d.goal.weights || {})) {
+        if (GOAL_TERMS[k]) weights[k] = v;
+      }
+      state.goal = {
+        name: d.goal.name || "custom",
+        weights,
+        target: (d.goal.target || [3, 3]).slice(0, 2).map(Number),
+      };
+    }
+    if (typeof d.duration === "number") state.duration = clamp(d.duration, 2, 15);
+    state.ctrl = ctl
+      ? { freq: ctl.freq, amps: ctl.amps.slice(), phases: ctl.phases.slice() }
+      : { freq: 1.2, amps: [], phases: [] };
+    state.trainedGens = (ctl && ctl.generations_trained) || 0;
+    state.history = []; state.meanHistory = [];
+
+    applyDraft();
+    buildNodeTable(); buildSpringTable(); buildBaseSeg(); buildPresetSeg();
+    buildGoalSeg(); buildTermList(); buildPhysList(); checkStability();
+    $("target-x").value = String(state.goal.target[0]);
+    $("target-z").value = String(state.goal.target[1]);
+    syncControls(); drawChart(); updateTrainButton();
+    $("train-readout").textContent =
+      `Loaded "${draft.name}": ${candidate.numMuscles} muscles, goal ${state.goal.name}.`;
+    $("body-alert").hidden = false;
+    $("body-alert").classList.add("ok");
+    $("body-alert").textContent = `Loaded from file: ${draft.name}.`;
+  });
+}
+function fileError(msg) {
+  $("train-readout").textContent = msg;
+  selectTab("train");
+}
+
+/* ---- wiring ------------------------------------------------------ */
+$("freq").addEventListener("input", (e) => {
+  state.ctrl.freq = parseFloat(e.target.value);
+  $("freq-val").textContent = state.ctrl.freq.toFixed(2) + " Hz";
+});
+$("play-btn").addEventListener("click", () => {
+  state.playing = !state.playing;
+  $("play-btn").textContent = state.playing ? "Pause" : "Play";
+});
+$("restart-btn").addEventListener("click", restartEpisode);
+$("train-btn").addEventListener("click", startTraining);
+$("zero-btn").addEventListener("click", () => {
+  state.ctrl.amps = state.ctrl.amps.map(() => 0);
+  state.ctrl.phases = state.ctrl.phases.map(() => 0);
+  syncControls(); restartEpisode();
+});
+$("random-btn").addEventListener("click", () => {
+  const r = mulberry32((Math.random() * 1e9) | 0);
+  state.ctrl.freq = 0.6 + r() * 1.4;
+  for (let i = 0; i < morph.numMuscles; i++) {
+    state.ctrl.amps[i] = (r() - 0.5) * 0.6;
+    state.ctrl.phases[i] = r() * 2 * Math.PI;
+  }
+  syncControls(); restartEpisode();
+});
+$("save-btn").addEventListener("click", saveExperiment);
+$("load-btn").addEventListener("click", () => $("load-input").click());
+$("load-input").addEventListener("change", loadExperiment);
+
+/* ---- boot -------------------------------------------------------- */
+state.ctrl = {
+  freq: PRESET_GAITS["quadruped/walk"].freq,
+  amps: PRESET_GAITS["quadruped/walk"].amps.slice(),
+  phases: PRESET_GAITS["quadruped/walk"].phases.slice(),
+};
+applyDraft();
+buildBaseSeg(); buildNodeTable(); buildSpringTable();
+buildGoalSeg(); buildTermList();
+buildPhysList(); checkStability();
+buildBank(); syncControls(); buildPresetSeg();
+updateTrainButton();
+restartEpisode();
+resize(); drawChart();
+$("play-btn").textContent = state.playing ? "Pause" : "Play";
+if (!state.playing) {
+  $("train-readout").textContent = "Paused — your system asks for reduced motion. Press Play to run the simulation.";
+}
+requestAnimationFrame(frame);
+window.addEventListener("resize", () => { resize(); drawChart(); });
+</script>

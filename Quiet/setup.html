@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quiet Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #e9ecf1;
+  --surface: #fbfcfd;
+  --surface-2: #f1f4f8;
+  --line: #d3d9e2;
+  --line-soft: #e4e9ef;
+  --ink: #141922;
+  --ink-2: #465061;
+  --ink-3: #6e7889;
+  --accent: #2f6287;
+  --accent-ink: #ffffff;
+  --done: #3f7355;
+  --done-bg: #e3eee7;
+  --warn: #8a5a1f;
+  --warn-bg: #f6ecdd;
+  --shadow: 0 1px 2px rgba(20, 25, 34, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1218;
+    --surface: #151b23;
+    --surface-2: #1b222c;
+    --line: #2a333f;
+    --line-soft: #212a35;
+    --ink: #e4e9f0;
+    --ink-2: #a3aebd;
+    --ink-3: #788494;
+    --accent: #6ba6d6;
+    --accent-ink: #0b1118;
+    --done: #79bb90;
+    --done-bg: #16281d;
+    --warn: #d9a05b;
+    --warn-bg: #2a2114;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1218;
+  --surface: #151b23;
+  --surface-2: #1b222c;
+  --line: #2a333f;
+  --line-soft: #212a35;
+  --ink: #e4e9f0;
+  --ink-2: #a3aebd;
+  --ink-3: #788494;
+  --accent: #6ba6d6;
+  --accent-ink: #0b1118;
+  --done: #79bb90;
+  --done-bg: #16281d;
+  --warn: #d9a05b;
+  --warn-bg: #2a2114;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 0 16px 64px;
+}
+h1, h2, h3 {
+  font-family: Literata, Georgia, serif;
+  margin: 0;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- sticky progress ---------- */
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px;
+}
+.bar-inner { max-width: 660px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.bar .track { flex: 1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar .fill { height: 100%; width: 0; background: var(--done); transition: width .25s ease; }
+.bar .count { font-family: "JetBrains Mono", monospace; font-size: .78rem; color: var(--ink-2); white-space: nowrap; }
+.bar button {
+  font: inherit; font-size: .78rem; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-2); border-radius: 6px; padding: 4px 9px; cursor: pointer;
+}
+.bar button:hover { border-color: var(--ink-3); color: var(--ink); }
+
+/* ---------- masthead ---------- */
+header.top { padding: 30px 0 20px; }
+header.top h1 { font-size: 2rem; font-weight: 600; }
+header.top p { color: var(--ink-2); margin: 8px 0 0; }
+
+/* ---------- config card ---------- */
+.config {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; box-shadow: var(--shadow); margin-bottom: 30px;
+}
+.config h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.config p.hint { color: var(--ink-3); font-size: .85rem; margin: 0 0 14px; }
+.fields { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 520px) { .fields { grid-template-columns: 1.4fr 1fr; } }
+.field label { display: block; font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.field input {
+  font-family: "JetBrains Mono", monospace; font-size: .9rem;
+  width: 100%; padding: 9px 10px;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: var(--surface-2); color: var(--ink);
+}
+.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---------- phases ---------- */
+.phase { margin-bottom: 36px; }
+.phase-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.venue {
+  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+  color: var(--accent); border: 1px solid currentColor; border-radius: 999px; padding: 2px 9px;
+}
+.phase h2 { font-size: 1.3rem; font-weight: 600; }
+.phase > p.lede { color: var(--ink-2); margin: 6px 0 16px; font-size: .94rem; }
+
+/* ---------- steps ---------- */
+.step {
+  display: grid; grid-template-columns: 30px 1fr; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 14px; margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.step > div { min-width: 0; }
+.step.done { background: var(--surface-2); border-color: var(--line-soft); }
+.step.done .step-title { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1px; }
+.step input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 26px; height: 26px; margin: 0; flex: none;
+  border: 1.5px solid var(--ink-3); border-radius: 7px;
+  background: transparent; cursor: pointer; position: relative;
+}
+.step input[type="checkbox"]:checked { background: var(--done); border-color: var(--done); }
+.step input[type="checkbox"]:checked::after {
+  content: ""; position: absolute; left: 8px; top: 3px;
+  width: 7px; height: 13px; border: solid var(--surface);
+  border-width: 0 2.5px 2.5px 0; transform: rotate(42deg);
+}
+.step input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.step-title { font-weight: 500; cursor: pointer; display: block; }
+.step-body { color: var(--ink-2); font-size: .91rem; margin-top: 6px; }
+.step-body p { margin: 0 0 8px; }
+.step-body p:last-child { margin-bottom: 0; }
+.step-body ul { margin: 6px 0 8px; padding-left: 20px; }
+.step-body li { margin-bottom: 3px; }
+
+/* ---------- code ---------- */
+.snippet { position: relative; margin: 8px 0; }
+.snippet pre {
+  margin: 0; padding: 11px 44px 11px 12px;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 8px; overflow-x: auto;
+  font-family: "JetBrains Mono", monospace; font-size: .82rem; line-height: 1.6;
+  color: var(--ink);
+}
+.snippet button.copy {
+  position: absolute; top: 7px; right: 7px;
+  font: inherit; font-size: .68rem; font-family: "JetBrains Mono", monospace;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+  border-radius: 5px; padding: 3px 7px; cursor: pointer;
+}
+.snippet button.copy:hover { color: var(--ink); border-color: var(--ink-3); }
+.snippet button.copy.ok { color: var(--done); border-color: var(--done); }
+code.inline {
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 4px; padding: 1px 5px; font-size: .85em;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- notes ---------- */
+.note {
+  border-left: 3px solid var(--warn); background: var(--warn-bg);
+  padding: 10px 12px; border-radius: 0 7px 7px 0; margin: 10px 0 0;
+  font-size: .88rem; color: var(--ink-2);
+}
+.note strong { color: var(--ink); }
+.reality {
+  border: 1px solid var(--line); border-radius: 10px; padding: 18px;
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.reality h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.reality ul { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: .92rem; }
+.reality li { margin-bottom: 6px; }
+footer { margin-top: 34px; color: var(--ink-3); font-size: .82rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-inner">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <span class="count" id="count">0 / 0</span>
+    <button type="button" id="reset">Reset</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<header class="top">
+  <h1>Quiet Setup</h1>
+  <p>Getting the app signed, installed and wired to a bare home screen. Three places, in order: the developer portal, your Mac, then the phone itself.</p>
+</header>
+
+<section class="config">
+  <h2>Your identifiers</h2>
+  <p class="hint">Fill these in once and every command and identifier below updates to match. Nothing leaves this page.</p>
+  <div class="fields">
+    <div class="field">
+      <label for="prefix">Bundle prefix</label>
+      <input id="prefix" type="text" spellcheck="false" autocapitalize="none" autocorrect="off" placeholder="com.yourname.quiet">
+    </div>
+    <div class="field">
+      <label for="team">Apple team ID</label>
+      <input id="team" type="text" spellcheck="false" autocapitalize="characters" autocorrect="off" placeholder="TEAMID1234">
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1 ============ -->
+<section class="phase">
+  <div class="phase-head">
+    <span class="venue">Developer portal</span>
+    <h2>Identifiers and capabilities</h2>
+  </div>
+  <p class="lede">At developer.apple.com → Certificates, Identifiers &amp; Profiles. Six targets means six App IDs.</p>
+
+  <div class="step" data-step="p1-appids">
+    <input type="checkbox" id="p1-appids">
+    <div>
+      <label class="step-title" for="p1-appids">Register six App IDs</label>
+      <div class="step-body">
+        <p>Identifiers → <strong>+</strong> → App IDs → App. Register each of these:</p>
+        <div class="snippet"><pre id="appids"></pre><button class="copy" type="button">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p1-caps">
+    <input type="checkbox" id="p1-caps">
+    <div>
+      <label class="step-title" for="p1-caps">Enable App Groups and Family Controls on all six</label>
+      <div class="step-body">
+        <p>Edit each App ID and tick both capabilities. All six need both — including the widget one, because the Control Center toggle writes Screen Time settings directly.</p>
+        <div class="note"><strong>Family Controls is a restricted entitlement.</strong> Development builds work on a paid account right away. Shipping to TestFlight or the App Store needs a separate approval request to Apple, linked from the capability in the portal. Start that early if you plan to distribute — it is a human review.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p1-group">
+    <input type="checkbox" id="p1-group">
+    <div>
+      <label class="step-title" for="p1-group">Register the App Group and attach it to all six</label>
+      <div class="step-body">
+        <p>Identifiers → App Groups → <strong>+</strong>, then go back to each App ID and select this group under App Groups → Configure.</p>
+        <div class="snippet"><pre id="groupid"></pre><button class="copy" type="button">copy</button></div>
+        <p>This group is the only channel between the app and its extensions. Miss it on one target and that extension silently reads empty settings.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 2 ============ -->
+<section class="phase">
+  <div class="phase-head">
+    <span class="venue">Your Mac</span>
+    <h2>Generate and sign</h2>
+  </div>
+  <p class="lede">Terminal, then Xcode. The project is generated from <code class="inline">project.yml</code> rather than checked in, so the first step is XcodeGen.</p>
+
+  <div class="step" data-step="p2-xcodegen">
+    <input type="checkbox" id="p2-xcodegen">
+    <div>
+      <label class="step-title" for="p2-xcodegen">Install XcodeGen</label>
+      <div class="step-body">
+        <div class="snippet"><pre>brew install xcodegen</pre><button class="copy" type="button">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p2-configure">
+    <input type="checkbox" id="p2-configure">
+    <div>
+      <label class="step-title" for="p2-configure">Rewrite the placeholders, then generate</label>
+      <div class="step-body">
+        <p>From the <code class="inline">Quiet/</code> directory. This rewrites the bundle prefix, App Group and team across the spec, the entitlements files and the Swift source.</p>
+        <div class="snippet"><pre id="cmd-configure"></pre><button class="copy" type="button">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p2-signing">
+    <input type="checkbox" id="p2-signing">
+    <div>
+      <label class="step-title" for="p2-signing">Check Signing &amp; Capabilities on every target</label>
+      <div class="step-body">
+        <p>Six targets, each needing the same three things. Xcode will not warn you if an extension is missing one — it will just misbehave at runtime.</p>
+        <ul>
+          <li>Team set</li>
+          <li>App Groups ticked, pointing at your group</li>
+          <li>Family Controls present</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p2-build">
+    <input type="checkbox" id="p2-build">
+    <div>
+      <label class="step-title" for="p2-build">Build to a real iPhone</label>
+      <div class="step-body">
+        <p>Not the Simulator. The UI renders there, but authorization fails, no shield ever appears, and no schedule ever fires — so a clean Simulator run tells you almost nothing.</p>
+        <div class="note">This code has <strong>never been compiled</strong>. Expect errors on the first build. They should be shallow — a renamed initialiser, a missing import — rather than structural. Send them over and I will work through them.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 3 ============ -->
+<section class="phase">
+  <div class="phase-head">
+    <span class="venue">On the phone</span>
+    <h2>Set up the quiet phone</h2>
+  </div>
+  <p class="lede">Everything from here happens on the iPhone itself. Keep this page open on it.</p>
+
+  <div class="step" data-step="p3-auth">
+    <input type="checkbox" id="p3-auth">
+    <div>
+      <label class="step-title" for="p3-auth">Open Quiet and grant Screen Time access</label>
+      <div class="step-body">
+        <p>Walk through onboarding and tap <em>Grant Screen Time access</em>. If the sheet refuses, the app prints why rather than failing silently.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-sort">
+    <input type="checkbox" id="p3-sort">
+    <div>
+      <label class="step-title" for="p3-sort">Sort apps into the three groups</label>
+      <div class="step-body">
+        <ul>
+          <li><strong>Essential</strong> — always allowed, even in dumb-phone mode</li>
+          <li><strong>Distracting</strong> — allowed, behind a delay and a daily limit</li>
+          <li><strong>Hidden</strong> — always shielded, no way through</li>
+        </ul>
+        <div class="note"><strong>Put Phone, Messages and Maps in Essential now.</strong> Quiet cannot add them for you — app identities only come out of the system picker, so there is no way for code to name them. Phone and Settings are not shieldable by Screen Time anyway, but Messages and Maps are, and dumb-phone mode will shield them if you leave them out.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-rows">
+    <input type="checkbox" id="p3-rows">
+    <div>
+      <label class="step-title" for="p3-rows">Add your home-screen rows</label>
+      <div class="step-body">
+        <p>Settings → Home screen rows. Up to eight. <em>Add the usual suspects</em> fills in Apple's own schemes, which are documented and stable.</p>
+        <p>For third-party apps, build a shortcut rather than guessing a scheme:</p>
+        <ul>
+          <li>Shortcuts → new shortcut → one action, <strong>Open App</strong> → pick the app</li>
+          <li>Name it, e.g. <code class="inline">Open Spotify</code></li>
+          <li>Back in Quiet, set that row's URL to:</li>
+        </ul>
+        <div class="snippet"><pre>shortcuts://run-shortcut?name=Open%20Spotify</pre><button class="copy" type="button">copy</button></div>
+        <p>Leave <em>Direct launch</em> off. WidgetKit documents widget links as opening the containing app, so a raw <code class="inline">spotify://</code> may do nothing. Off, the row opens Quiet and it forwards — one frame of Quiet, but it works.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-page">
+    <input type="checkbox" id="p3-page">
+    <div>
+      <label class="step-title" for="p3-page">Make one blank page with just the widget</label>
+      <div class="step-body">
+        <p>Long-press the home screen to enter jiggle mode. Drag every icon off one page — they stay in App Library. Then <strong>+</strong> → Quiet → add the small or medium widget.</p>
+        <p>Medium is worth it: a small widget is a single tap target, so rows are not individually tappable at that size.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-hide">
+    <input type="checkbox" id="p3-hide">
+    <div>
+      <label class="step-title" for="p3-hide">Hide every other page</label>
+      <div class="step-body">
+        <p>Still in jiggle mode, tap the row of page dots near the bottom. Untick every page except the widget one. Done.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-dock">
+    <input type="checkbox" id="p3-dock">
+    <div>
+      <label class="step-title" for="p3-dock">Empty the dock</label>
+      <div class="step-body">
+        <p>Drag the four dock apps up into the page area, then off it. An empty dock is much less of a pull than four bright icons sitting under your thumb.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-wallpaper">
+    <input type="checkbox" id="p3-wallpaper">
+    <div>
+      <label class="step-title" for="p3-wallpaper">Set a dark wallpaper</label>
+      <div class="step-body">
+        <p>Settings → Wallpaper → Add New Wallpaper → <strong>Colour</strong> → black → Set.</p>
+        <p>For a text-based one, make a black PNG with a line of text in any editor, save it to Photos, then Add New Wallpaper → Photos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-focus">
+    <input type="checkbox" id="p3-focus">
+    <div>
+      <label class="step-title" for="p3-focus">Create a Quiet Focus that shows only that page</label>
+      <div class="step-body">
+        <p>Settings → Focus → <strong>+</strong> → Custom → name it Quiet. Then under the Home Screen section, <strong>Customise Pages</strong> → select only your widget page.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="p3-automation">
+    <input type="checkbox" id="p3-automation">
+    <div>
+      <label class="step-title" for="p3-automation">Wire the Focus to the mode</label>
+      <div class="step-body">
+        <p>Shortcuts → Automation → <strong>+</strong> → Focus → Quiet → <em>Is Turned On</em> → Run Immediately → add action <strong>Set Dumb Phone Mode</strong> → On.</p>
+        <p>Add the mirror automation for <em>Is Turned Off</em>, set to Off. Now one Focus toggle changes the home screen and the shields together.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reality">
+  <h2>What this still will not do</h2>
+  <ul>
+    <li>Shielded apps keep their icons. The shield appears <em>after</em> you tap one — there is no API to hide or remove an icon.</li>
+    <li>They can still notify you. Notification filtering is closed to third-party apps; the Focus does that part, not Quiet.</li>
+    <li>Everything stays reachable from App Library and Search. The bare page is a speed bump; the shield is the part with teeth.</li>
+    <li>Settings → Screen Time → Apps with Screen Time Access revokes Quiet's permission and drops every shield at once. Strict mode blocks deleting the app, but cannot stop that. Nothing on the App Store can.</li>
+  </ul>
+</section>
+
+<footer>
+  Full detail, including which APIs were written from memory and what needs a device to verify, is in <code class="inline">Quiet/README.md</code>. Progress on this page is saved in this browser only — ticks made on your Mac will not show on your phone.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "quiet-setup-v1";
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function save(state) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+  }
+
+  var state = load();
+  if (!state.checked) state.checked = {};
+
+  // ---- identifier substitution -------------------------------------
+  var prefixInput = document.getElementById("prefix");
+  var teamInput = document.getElementById("team");
+  var SUFFIXES = ["", ".monitor", ".shieldconfig", ".shieldaction", ".widgets", ".report"];
+
+  function prefix() { return (prefixInput.value || "").trim() || "com.yourname.quiet"; }
+  function team() { return (teamInput.value || "").trim() || "TEAMID1234"; }
+
+  function render() {
+    var p = prefix();
+    document.getElementById("appids").textContent =
+      SUFFIXES.map(function (s) { return p + s; }).join("\n");
+    document.getElementById("groupid").textContent = "group." + p;
+    document.getElementById("cmd-configure").textContent =
+      "cd Quiet\n./configure.sh " + p + " " + team() + "\nxcodegen generate\nopen Quiet.xcodeproj";
+  }
+
+  prefixInput.value = state.prefix || "";
+  teamInput.value = state.team || "";
+  prefixInput.addEventListener("input", function () {
+    state.prefix = prefixInput.value; save(state); render();
+  });
+  teamInput.addEventListener("input", function () {
+    state.team = teamInput.value; save(state); render();
+  });
+  render();
+
+  // ---- checklist ----------------------------------------------------
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+  var fill = document.getElementById("fill");
+  var count = document.getElementById("count");
+
+  function paint() {
+    var done = 0;
+    steps.forEach(function (step) {
+      var box = step.querySelector("input[type=checkbox]");
+      step.classList.toggle("done", box.checked);
+      if (box.checked) done++;
+    });
+    fill.style.width = (steps.length ? (done / steps.length) * 100 : 0) + "%";
+    count.textContent = done + " / " + steps.length;
+  }
+
+  steps.forEach(function (step) {
+    var id = step.getAttribute("data-step");
+    var box = step.querySelector("input[type=checkbox]");
+    box.checked = !!state.checked[id];
+    box.addEventListener("change", function () {
+      state.checked[id] = box.checked;
+      save(state);
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById("reset").addEventListener("click", function () {
+    state.checked = {};
+    save(state);
+    steps.forEach(function (step) { step.querySelector("input[type=checkbox]").checked = false; });
+    paint();
+  });
+
+  // ---- copy buttons --------------------------------------------------
+  document.querySelectorAll(".snippet button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.parentNode.querySelector("pre").textContent;
+      var done = function () {
+        btn.textContent = "copied";
+        btn.classList.add("ok");
+        setTimeout(function () { btn.textContent = "copy"; btn.classList.remove("ok"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { btn.textContent = "select it"; });
+      } else {
+        btn.textContent = "select it";
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

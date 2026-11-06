@@ -1,0 +1,167 @@
+name: Quiet
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1"          # iPhone only
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: minimal
+    # Set your team here, or run ./configure.sh
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+# ---------------------------------------------------------------------------
+# Source groups. Extensions get only the shared files they actually need:
+# a shield extension has roughly a 6 MB ceiling, so nothing goes in that
+# does not have to.
+# ---------------------------------------------------------------------------
+targets:
+
+  Quiet:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Shared
+      - path: Resources
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet
+        INFOPLIST_FILE: Config/Info-App.plist
+        CODE_SIGN_ENTITLEMENTS: Config/Quiet.entitlements
+        PRODUCT_NAME: Quiet
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0"
+    dependencies:
+      - target: QuietMonitor
+      - target: QuietShieldConfiguration
+      - target: QuietShieldAction
+      - target: QuietWidgets
+      - target: QuietReport
+      - sdk: FamilyControls.framework
+      - sdk: ManagedSettings.framework
+      - sdk: DeviceActivity.framework
+
+  QuietMonitor:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Monitor
+      - path: Shared/AppGroup.swift
+      - path: Shared/SharedStore.swift
+      - path: Shared/Selections.swift
+      - path: Shared/ShieldStores.swift
+      - path: Shared/ActivityNames.swift
+      - path: Shared/OverrideLedger.swift
+      - path: Shared/LockState.swift
+      - path: Shared/EventLog.swift
+      - path: Shared/FrictionSettings.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet.monitor
+        INFOPLIST_FILE: Config/Info-Monitor.plist
+        CODE_SIGN_ENTITLEMENTS: Config/QuietMonitor.entitlements
+    dependencies:
+      - sdk: DeviceActivity.framework
+      - sdk: ManagedSettings.framework
+      - sdk: FamilyControls.framework
+
+  QuietShieldConfiguration:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShieldConfiguration
+      - path: Shared/AppGroup.swift
+      - path: Shared/SharedStore.swift
+      - path: Shared/OverrideLedger.swift
+      - path: Shared/LockState.swift
+      - path: Shared/FrictionSettings.swift
+      - path: Shared/Gatekeeper.swift
+      - path: Shared/Selections.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet.shieldconfig
+        INFOPLIST_FILE: Config/Info-ShieldConfiguration.plist
+        CODE_SIGN_ENTITLEMENTS: Config/QuietShieldConfiguration.entitlements
+    dependencies:
+      - sdk: ManagedSettings.framework
+      - sdk: ManagedSettingsUI.framework
+      - sdk: FamilyControls.framework
+
+  QuietShieldAction:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShieldAction
+      - path: Shared/AppGroup.swift
+      - path: Shared/SharedStore.swift
+      - path: Shared/Selections.swift
+      - path: Shared/ShieldStores.swift
+      - path: Shared/ActivityNames.swift
+      - path: Shared/OverrideLedger.swift
+      - path: Shared/LockState.swift
+      - path: Shared/EventLog.swift
+      - path: Shared/FrictionSettings.swift
+      - path: Shared/Gatekeeper.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet.shieldaction
+        INFOPLIST_FILE: Config/Info-ShieldAction.plist
+        CODE_SIGN_ENTITLEMENTS: Config/QuietShieldAction.entitlements
+    dependencies:
+      - sdk: ManagedSettings.framework
+      - sdk: DeviceActivity.framework
+      - sdk: FamilyControls.framework
+
+  QuietWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared/AppGroup.swift
+      - path: Shared/SharedStore.swift
+      - path: Shared/LaunchSlot.swift
+      - path: Shared/LockState.swift
+      - path: Shared/Selections.swift
+      - path: Shared/ShieldStores.swift
+      - path: Shared/OverrideLedger.swift
+      - path: Shared/FrictionSettings.swift
+      - path: Shared/EventLog.swift
+      - path: Shared/DumbModeController.swift
+      - path: Shared/DumbModeIntents.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet.widgets
+        INFOPLIST_FILE: Config/Info-Widgets.plist
+        CODE_SIGN_ENTITLEMENTS: Config/QuietWidgets.entitlements
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
+      - sdk: ManagedSettings.framework
+      - sdk: FamilyControls.framework
+
+  QuietReport:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Report
+      - path: Shared/AppGroup.swift
+      - path: Shared/ReportContext.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.quiet.report
+        INFOPLIST_FILE: Config/Info-Report.plist
+        CODE_SIGN_ENTITLEMENTS: Config/QuietReport.entitlements
+    dependencies:
+      - sdk: DeviceActivity.framework
+      - sdk: SwiftUI.framework
+      - sdk: FamilyControls.framework
