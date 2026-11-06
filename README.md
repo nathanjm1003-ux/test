@@ -1,10 +1,31 @@
-# agent-sandbox
+# test
+
+Three unrelated projects that happen to share a git history, built across one
+session. Nothing here imports anything from anything else.
+
+| Project | Where | What it is | Status |
+|---|---|---|---|
+| **agent-sandbox** | repo root (`agent_sandbox/`, `tests/`) | A dependency-free Python sandbox for testing ML/AI agents: seeded environments, an evaluation harness, a tool sandbox, tabular Q-learning, and a 3D mass-spring creature simulator with an evolution-strategy trainer | 94 tests passing |
+| **Gait Lab** | [`web/`](web/) | A browser front-end for the creature simulator — build a body, compose a goal from weighted terms, set the physics, evolve a gait. Its physics matches the Python package to six decimal places, so controllers move between them unchanged | Works; verified in a headless browser |
+| **Quiet** | [`Quiet/`](Quiet/) | An iOS 17+ app that turns an iPhone into something closer to a dumb phone, using Apple's Screen Time APIs (FamilyControls, ManagedSettings, DeviceActivity) across six targets | **Never compiled** — written on Linux, no Swift toolchain. See its README |
+
+Each project has its own README:
+
+- [`web/README.md`](web/README.md) — how the page and the Python package line up, and how to edit bodies, goals and physics
+- [`Quiet/README.md`](Quiet/README.md) — what iOS will and will not allow, exact portal and Xcode steps, which APIs were written from memory, and what needs a real device. `Quiet/setup.html` is the same sequence as a tick-through checklist.
+
+The rest of this file documents **agent-sandbox**, the Python package at the
+repository root.
+
+---
+
+## agent-sandbox
 
 A lightweight, dependency-free testing sandbox for machine learning / AI agents.
 Everything is pure Python stdlib (pytest only for the test suite), deterministic,
 and seedable, so agent behavior can be tested reproducibly in CI.
 
-## What's inside
+### What's inside
 
 | Component | Module | Purpose |
 |---|---|---|
@@ -13,7 +34,7 @@ and seedable, so agent behavior can be tested reproducibly in CI.
 | Harness | `agent_sandbox.harness` | Runs episodes under step/time budgets, contains agent crashes, aggregates metrics across seeds |
 | Tool sandbox | `agent_sandbox.tools` | For tool-using (LLM-style) agents: records every call, enforces call budgets, blocks unregistered tools |
 
-## Quick start
+### Quick start
 
 ```bash
 pip install -e ".[dev]"
@@ -21,7 +42,7 @@ pytest              # run the test suite
 python examples/run_demo.py
 ```
 
-## Evaluating an agent
+### Evaluating an agent
 
 ```python
 from agent_sandbox import Agent, evaluate
@@ -44,7 +65,7 @@ Key safety properties of the harness:
 - **Reproducibility** — each episode runs on an explicit seed; identical
   agent + environment + seed always produce identical results.
 
-## Training and saving agents
+### Training and saving agents
 
 `QLearningAgent` is a tabular Q-learner whose Q-table survives across
 episodes. `train()` runs it repeatedly on one fixed map (same env seed,
@@ -66,7 +87,7 @@ agent.epsilon = 0.0                     # act greedily
 print(run_episode(agent, env, seed=3).total_reward)
 ```
 
-## 3D movement simulator
+### 3D movement simulator
 
 `agent_sandbox.creature` simulates creatures built from point masses joined
 by springs. Springs marked as *muscles* have an oscillating rest length:
@@ -99,7 +120,7 @@ fitness bar per generation. The simulation is deterministic — the same
 parameters always yield the same trajectory — and `evolve` is reproducible
 per seed.
 
-### Everything is editable
+#### Everything is editable
 
 The body, the goal and the physics are all data, not code.
 
@@ -151,7 +172,7 @@ exp.controller = report.best
 save_experiment(exp, "tripod.json")
 ```
 
-## Testing tool-using agents
+### Testing tool-using agents
 
 ```python
 from agent_sandbox import ToolSandbox
@@ -164,7 +185,7 @@ sandbox.call("rm_rf")                  # raises ToolNotAllowed
 sandbox.transcript                     # full ordered record: args, results, errors, timing
 ```
 
-## Adding an environment
+### Adding an environment
 
 Subclass `Environment`, implement `reset` / `step` / `action_space`
 (deterministic given the seed), and register it:
